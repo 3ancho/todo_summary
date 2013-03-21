@@ -22,86 +22,113 @@ class App:
     self.divider = urwid.Divider(u"-");
 
     # widgets
-    header_text = summary.Summary.bootstrap()
-    self.header = urwid.Text("Editing: %s\n" % header_text)
+    header_text = "Summary" # summary.Summary.bootstrap() # TODO change this
 
-    self.footer = urwid.Edit(u"", "footer")
+    self.header = urwid.Text("Editing: %s\n" % header_text)
 
     self.content = urwid.Edit(u"Content:\n", multiline=True)
 
     self.tag = urwid.Edit(u"Tags:\n")
 
-    self.txt = urwid.Text(u"display")
+    self.footer = urwid.Text(u"display")
 
-    self.tag_focused = True
+    self.txt = urwid.Text(u"display") # debug
 
-    self.pre_focus = 1
-    self.mode = App.INPUT_MODE
-
-    self.pile = urwid.Pile([self.header, 
-      self.tag, self.divider, self.content,
-      self.divider, self.footer, self.txt])
-
-
+    self.pile = urwid.Pile([ self.tag, self.divider, self.content, self.divider, self.txt])
     self.fill = urwid.Filler(self.pile, 'top')
 
-    # set main loop
-    self.loop = urwid.MainLoop(self.fill, unhandled_input=self.keypress_handler)
+    self.frame = urwid.Frame(self.fill, header=self.header, footer=self.footer)
 
-    # last_press
+    # UI block focus, mode
+    self.tag_focused = True
+    self.pre_focus = 0
+    self.mode = App.INPUT_MODE
+
+    # key press 
     self.pres_thres = 0.8
     self.last_press = 598233600
-
     self.key_buf = []
+
+    # set main loop
+    self.loop = urwid.MainLoop(self.frame, unhandled_input=self.keypress_handler)
 
 
   def run(self):
     self.loop.run()
 
-  def change_mode(self):
-    if self.mode == App.CMD_MODE:
-      self.mode = App.INPUT_MODE
-      self.pile.set_focus(self.pre_focus)
-      self.txt.set_text("input mode")
-    elif self.mode == App.INPUT_MODE:
+  def change_cmd_mode(self):
+    #if self.mode == App.CMD_MODE:
+    #  self.mode = App.INPUT_MODE
+    #  self.pile.set_focus(self.pre_focus)
+    #  self.footer.set_text("input mode")
+    if self.mode == App.INPUT_MODE:
       self.mode = App.CMD_MODE
       self.pre_focus = self.pile.focus_position
-      self.pile.set_focus(6)
-      self.txt.set_text("cmd mode")
+      self.pile.set_focus(3)
+      self.footer.set_text("cmd mode %s" % self.pre_focus)
+      self.key_buf = []
+      self.txt.set_text("")
 
   def keypress_handler(self, key):
 
     if time.time() - self.last_press > self.pres_thres:
       self.key_buf = []
+      self.key_buf.append(key)
       self.last_press = time.time()
     else:
-      self.last_press = time.time()
       self.key_buf.append(key)
+      self.last_press = time.time()
 
     # 1. Change mode
     if key == 'esc':
-      print "change mode"
-      self.change_mode()
+      self.change_cmd_mode()
+
     # input mode
     elif self.mode == App.INPUT_MODE:
-      if key in ('tab'):
-        self.txt.set_text(" %s  " % self.pile.focus_position)
+      if key == 'tab':
+        self.footer.set_text(" %s  " % self.pile.focus_position)
         if (self.tag_focused):
-          self.pile.set_focus(3)
+          self.pile.set_focus(2)
           self.tag_focused = False
         else:
-          self.pile.set_focus(1)
+          self.pile.set_focus(0)
           self.tag_focused = True
     # command mode
     elif self.mode == App.CMD_MODE:
       self.txt.set_text(str(self.key_buf))
-      if key in ('p', 'P'):
-        self.alarm.play()
-      if key in ('s', 'S'):
-        self.txt.set_text(summary.Summary.bootstrap())
-      if key in ('i', 'I'):
-        self.txt.set_text('input mode')
-        self.change_mode()
+
+      # single key
+      if key == 'i':
+        self.mode = App.INPUT_MODE
+        self.pile.set_focus(self.pre_focus)
+        self.footer.set_text('input mode')
+
+      # combinations
+      if key == 'enter':
+        command = "".join(self.key_buf)
+        self.key_buf = []
+        self.txt.set_text(command)
+
+        if command == ':qenter': 
+          raise urwid.ExitMainLoop()
+
+        if command == ':wenter': 
+          tag = self.tag.get_edit_text()
+          content =self.content.get_edit_text()
+          self.footer.set_text('Saved to: %s' % summary.Summary.bootstrap(tag, content))
+
+        if command in (':xenter', ':wqenter'): 
+          tag = self.tag.get_edit_text()
+          content =self.content.get_edit_text()
+          self.footer.set_text('Saved to: %s' % summary.Summary.bootstrap(tag, content))
+          time.sleep(0.4)
+          raise urwid.ExitMainLoop()
+          
+
+        if command == ':senter': 
+          self.alarm.play()
+          self.footer.set_text('Saved to: %s' % summary.Summary.bootstrap())
+
         
 
       #if key in ('esc'):
