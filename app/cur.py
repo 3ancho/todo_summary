@@ -4,9 +4,9 @@ import urwid
 import summary
 
 from urwid.util import move_next_char
+from urwid.widget import LEFT, SPACE
 
-
-# util functions 
+# static util functions 
 def last(n, li):
   # take a list return a string
   if n > 0 and n <= len(li):
@@ -14,14 +14,163 @@ def last(n, li):
   else:
     return ''
 
+# Vi mode Edit box
+class ViEdit(urwid.Edit):
+  CMD_MODE = 0
+  INPUT_MODE = 1
+
+  def __init__(self, caption=u"", edit_text=u"", multiline=False,
+          align=LEFT, wrap=SPACE, allow_tab=False,
+          edit_pos=None, layout=None, mask=None, 
+          app=None, timeout=0.7, last_press=598233600,
+          mode=CMD_MODE):
+
+    # additional stuff 
+    self.mode = mode 
+    self.timeout = timeout
+    self.last_press = last_press
+    self.key_buf = []
+    self._app = app
+    super(ViEdit, self).__init__(caption, edit_text, multiline,
+           align, wrap, allow_tab,
+           edit_pos, layout, mask)
+
+  def get_app(self):
+    return self._app
+
+  def cmd_keypress_handler(self, size, key):
+    # Step 1.
+    # timeout 
+    if time.time() - self.last_press > self.timeout:
+      self.key_buf = []
+      self.key_buf.append(key)
+      self.last_press = time.time()
+
+    else:
+      self.key_buf.append(key)
+      self.last_press = time.time()
+
+    # print key pressed in mode bar
+    self._app.txt.set_text(self.key_buf[-10:])
+
+    # Step 2.
+    if key == 'i':
+      self.mode = ViEdit.INPUT_MODE
+
+      self._app.footer.set_text('-- INSERT --')
+      self._app.txt.set_text('INSERT')
+
+      # key control shift
+      self.keypress = self.origin_keypress
+
+    elif key == 'esc':
+      # in cmd mode just clear key buffer
+      self._app.txt.set_text('')
+      self._app.footer.set_text('')
+      self.key_buf = []
+
+    elif key == 'k':
+      # up 
+      pos = self.get_cursor_coords(size)
+      self.move_cursor_to_coords(size, pos[0], pos[1] - 1)
+
+    elif key == 'j':
+      # down 
+      pos = self.get_cursor_coords(size)
+      self.move_cursor_to_coords(size, pos[0], pos[1] + 1)
+
+    elif key == 'h':
+      # left 
+        pos = self.get_cursor_coords(size)
+        self.move_cursor_to_coords(size, pos[0] - 1, pos[1])
+
+    elif key == 'l':
+      # right 
+        pos = self.get_cursor_coords(size)
+        self.move_cursor_to_coords(size, pos[0] + 1, pos[1])
+
+    elif key == '$':
+        pos = self.get_cursor_coords(size)
+        x_pos = pos[0] + 1
+        self.move_cursor_to_coords(size, x_pos, pos[1])
+
+        while x_pos == self.get_cursor_coords(size)[0]:
+          x_pos = x_pos + 1
+          self.move_cursor_to_coords(size, x_pos, pos[1])
+
+    elif key == '^' or key == '0':
+        pos = self.get_cursor_coords(size)
+        self.move_cursor_to_coords(size, 0, pos[1])
+
+    elif key == 'G' :
+        pos = self.get_cursor_coords(size)
+        y_pos = pos[1] + 1
+        self.move_cursor_to_coords(size, 0, y_pos)
+
+        while y_pos == self.get_cursor_coords(size)[1]:
+          y_pos = y_pos + 1
+          self.move_cursor_to_coords(size, 0, y_pos)
+
+    elif key == 'g' and len(self.key_buf) > 1 and self.key_buf[-2] == 'g':
+        self.move_cursor_to_coords(size, 0, 1)
+
+    elif key == 'x':
+        p = self.edit_pos
+        if p >= len(self.edit_text):
+          return key
+        p = move_next_char(self.edit_text, p, len(self.edit_text))
+        self.set_edit_text( self.edit_text[:self.edit_pos] 
+            + self.edit_text[p:] )
+
+    # end of single key press handler 
+
+    # Step 3
+    # combinations
+    elif key == 'enter':
+      command = self.key_buf[:-1] # pop the 'enter' key
+      self.key_buf = []
+
+      if last(2, command) == ':q': 
+        raise urwid.ExitMainLoop()
+
+      if last(2, command) == ':w': 
+        pass
+
+      if last(2, command) == ':x' or last(3, command) ==  ':wq': 
+        time.sleep(0.2) # flash the message 
+        raise urwid.ExitMainLoop()
+
+      if last(3, command) == ':to' or \
+         last(3, command) == ':do' or \
+         last(2, command) in (':t', ':d'):
+        self._app.frame.set_body(self.fill_todo)
+
+      if last(3, command) == ':su' or \
+         last(2, command) in (':s'):
+        self._app.frame.set_body(self.fill_sum)
+
+  def keypress(self, size, key):
+    if key == 'esc': # 1. Change mode
+      # clear buffer
+      self.key_buf = []
+
+      self.mode = ViEdit.CMD_MODE
+      # key control shift
+      self.origin_keypress = self.keypress
+      self.keypress = self.cmd_keypress_handler
+    else:
+      return super(ViEdit, self).keypress(size, key) 
+
 class App:
   CMD_MODE = 0
   INPUT_MODE = 1
 
   def __init__(self):
-    palette = [ ('header', 'black', 'light gray'),
-                ('body', 'black', 'dark red'),
-                ('footer', 'black', 'dark blue'),]
+    palette = [
+        ('body','dark blue', '', 'standout'),
+        ('footer','light red', '', 'black'),
+        ('header','light blue', 'black'),
+    ]
 
     # summary
     self.summary = None
@@ -35,6 +184,7 @@ class App:
     header_text = "Summary" 
 
     self.header = urwid.Text("Editing: %s\n" % header_text)
+    self.v_header = urwid.AttrMap(self.header, 'header')
 
     self.content = urwid.Edit(u"Content:\n", multiline=True)
 
@@ -42,12 +192,19 @@ class App:
 
     self.footer = urwid.Text(u"-- INSERT --")
 
-    self.txt = urwid.Text(u"-- INSERT --") # debug
+    self.txt = urwid.Text(u"Display") # debug
 
-    self.pile = urwid.Pile([ self.tag, self.divider, self.content, self.divider, self.txt])
-    self.fill = urwid.Filler(self.pile, 'top')
+    self.footer_pile = urwid.Pile( [self.txt, self.footer] )
+    self.v_footer = urwid.AttrMap(self.footer_pile, 'footer')
 
-    self.frame = urwid.Frame(self.fill, header=self.header, footer=self.footer)
+    self.pile = urwid.Pile([ self.tag, self.divider, self.content, self.divider])
+    self.fill_sum = urwid.Filler(self.pile, 'top')
+
+    self.todo = ViEdit(u"Todo:", multiline=True, app=self)
+    self.fill_todo = urwid.Filler(self.todo, 'top')
+
+    self.frame = urwid.Frame(self.fill_sum, header=self.v_header, footer=self.v_footer)
+    self.v_frame = urwid.AttrMap(self.frame, 'body')
 
     # UI block focus, mode
     self.tag_focused = True
@@ -55,12 +212,12 @@ class App:
     self.mode = App.INPUT_MODE
 
     # key press 
-    self.pres_thres = 0.7
+    self.timeout = 0.7
     self.last_press = 598233600
     self.key_buf = []
 
     # set main loop
-    self.loop = urwid.MainLoop(self.frame, unhandled_input=self.insert_keypress_handler)
+    self.loop = urwid.MainLoop(self.v_frame, palette, unhandled_input=self.insert_keypress_handler)
 
     self.good = False
 
@@ -83,7 +240,7 @@ class App:
 
     # Step 1.
     # timeout 
-    if time.time() - self.last_press > self.pres_thres:
+    if time.time() - self.last_press > self.timeout:
       self.key_buf = []
       self.key_buf.append(key)
       self.last_press = time.time()
@@ -239,6 +396,17 @@ class App:
         time.sleep(0.2) # flash the message 
         raise urwid.ExitMainLoop()
 
+      if last(3, command) == ':to' or \
+         last(3, command) == ':do' or \
+         last(2, command) in (':t', ':d'):
+        self.footer.set_text("todo mode")
+        #self.todo.keypress = self.todo.insert_keypress_handler
+        self.frame.set_body(self.fill_todo)
+        self.frame.set_focus('body')
+
+      if last(3, command) == ':su' or \
+         last(2, command) in (':s'):
+        self.frame.set_body(self.fill_sum)
 
   def insert_keypress_handler(self, key):
     if key == 'esc': # 1. Change mode
