@@ -54,6 +54,7 @@ class Summary(object):
     if self._app:
       self._app.tag.set_edit_text(self._tag)
       self._app.content.set_edit_text(self._content)
+      self._app._content_line_count = len(content_lines)
         
   @property
   def filepath(self):
