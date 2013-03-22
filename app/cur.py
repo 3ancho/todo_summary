@@ -5,6 +5,15 @@ import time
 import urwid 
 import summary
 
+
+#class MyEdit(urwid.Edit):
+#
+#  def hello():
+#    print "hello"
+#
+#  def keypress(self, size, key):
+#    super(MyEdit, self).keypress(size, key)
+
 class App:
   CMD_MODE = 0
   INPUT_MODE = 1
@@ -14,6 +23,8 @@ class App:
 #                ('body', 'black', 'dark red'),
 #                ('bg', 'black', 'dark blue'),]
 
+    # summary
+    self.summary = None
     # init sound, register alerm
     sound_player.init()
     self.alarm = sound_player.Sound("thermo.wav")
@@ -22,7 +33,7 @@ class App:
     self.divider = urwid.Divider(u"-");
 
     # widgets
-    header_text = "Summary" # summary.Summary.bootstrap() # TODO change this
+    header_text = "Summary" 
 
     self.header = urwid.Text("Editing: %s\n" % header_text)
 
@@ -30,9 +41,9 @@ class App:
 
     self.tag = urwid.Edit(u"Tags:\n")
 
-    self.footer = urwid.Text(u"display")
+    self.footer = urwid.Text(u"-- INSERT --")
 
-    self.txt = urwid.Text(u"display") # debug
+    self.txt = urwid.Text(u"-- INSERT --") # debug
 
     self.pile = urwid.Pile([ self.tag, self.divider, self.content, self.divider, self.txt])
     self.fill = urwid.Filler(self.pile, 'top')
@@ -50,94 +61,118 @@ class App:
     self.key_buf = []
 
     # set main loop
-    self.loop = urwid.MainLoop(self.frame, unhandled_input=self.keypress_handler)
+    self.loop = urwid.MainLoop(self.frame, unhandled_input=self.insert_keypress_handler)
 
+    self.good = False
 
+    self.old = urwid.Edit.keypress 
+    
   def run(self):
+    self.summary = summary.Summary(app=self)
+    self.header.set_text(self.summary.filepath)
     self.loop.run()
 
   def change_cmd_mode(self):
-    #if self.mode == App.CMD_MODE:
-    #  self.mode = App.INPUT_MODE
-    #  self.pile.set_focus(self.pre_focus)
-    #  self.footer.set_text("input mode")
     if self.mode == App.INPUT_MODE:
       self.mode = App.CMD_MODE
       self.pre_focus = self.pile.focus_position
-      self.pile.set_focus(3)
-      self.footer.set_text("cmd mode %s" % self.pre_focus)
-      self.key_buf = []
-      self.txt.set_text("")
+      #self.pile.set_focus(3)
 
-  def keypress_handler(self, key):
-
+  def cmd_keypress_handler(self, size, key):
+    # timeout 
     if time.time() - self.last_press > self.pres_thres:
       self.key_buf = []
       self.key_buf.append(key)
       self.last_press = time.time()
+
     else:
       self.key_buf.append(key)
       self.last_press = time.time()
 
-    # 1. Change mode
-    if key == 'esc':
-      self.change_cmd_mode()
 
-    # input mode
-    elif self.mode == App.INPUT_MODE:
-      if key == 'tab':
-        self.footer.set_text(" %s  " % self.pile.focus_position)
-        if (self.tag_focused):
-          self.pile.set_focus(2)
-          self.tag_focused = False
-        else:
-          self.pile.set_focus(0)
-          self.tag_focused = True
-    # command mode
-    elif self.mode == App.CMD_MODE:
-      self.txt.set_text(str(self.key_buf))
+    # print key pressed
+    self.txt.set_text(str(self.key_buf))
 
-      # single key
-      if key == 'i':
-        self.mode = App.INPUT_MODE
-        self.pile.set_focus(self.pre_focus)
-        self.footer.set_text('input mode')
+    if key == 'i':
+      self.mode = App.INPUT_MODE
+      self.pile.set_focus(self.pre_focus)
+      self.footer.set_text('-- INSERT --')
+      self.txt.set_text('-- INSERT --')
+      # key control shift
+      self.tag.keypress = self.tag.old
+      self.content.keypress = self.content.old
 
-      # combinations
-      if key == 'enter':
-        command = "".join(self.key_buf)
-        self.key_buf = []
-        self.txt.set_text(command)
+    elif key == 'esc':
+      # in cmd mode just clear key buffer
+      self.txt.set_text('')
+      self.footer.set_text('')
+      self.key_buf = []
 
-        if command == ':qenter': 
-          raise urwid.ExitMainLoop()
+    # single key
+    #if key == 'i':
+    #  self.mode = App.INPUT_MODE
+    #  self.pile.set_focus(self.pre_focus)
+    #  self.footer.set_text('-- INSERT --')
+    #  self.txt.set_text('-- INSERT --')
 
-        if command == ':wenter': 
-          tag = self.tag.get_edit_text()
-          content =self.content.get_edit_text()
-          self.footer.set_text('Saved to: %s' % summary.Summary.bootstrap(tag, content))
+    # combinations
+    if key == 'enter':
+      command = "".join(self.key_buf)
+      self.key_buf = []
+      self.txt.set_text(command)
 
-        if command in (':xenter', ':wqenter'): 
-          tag = self.tag.get_edit_text()
-          content =self.content.get_edit_text()
-          self.footer.set_text('Saved to: %s' % summary.Summary.bootstrap(tag, content))
-          time.sleep(0.4)
-          raise urwid.ExitMainLoop()
-          
+      if command == ':qenter': 
+        raise urwid.ExitMainLoop()
 
-        if command == ':senter': 
-          self.alarm.play()
-          self.footer.set_text('Saved to: %s' % summary.Summary.bootstrap())
+      if command == ':wenter': 
+        self.update_summary()
+        self.save_summary()
 
-        
+      if command in (':xenter', ':wqenter'): 
+        self.update_summary()
+        self.save_summary()
 
-      #if key in ('esc'):
-      #  if (self.footer_focused):
-      #    self.footer_focused = False
-      #  else:
-      #    self.pile.set_focus(1)
-      #    self.footer_focused = True
+        time.sleep(0.2) # flash the message 
+        raise urwid.ExitMainLoop()
 
+  def insert_keypress_handler(self, key):
+
+
+    if key == 'esc': # 1. Change mode
+
+      # clear buffer
+      self.txt.set_text('')
+      self.footer.set_text('')
+      self.key_buf = []
+
+      self.mode = App.CMD_MODE
+      self.pre_focus = self.pile.focus_position
+      self.frame.set_focus('body')
+
+      # key control shift
+      self.tag.old = self.tag.keypress
+      self.tag.keypress = self.cmd_keypress_handler
+
+      self.content.old = self.content.keypress
+      self.content.keypress = self.cmd_keypress_handler
+
+    elif key == 'tab':
+      if (self.tag_focused):
+        self.pile.set_focus(2)
+        self.tag_focused = False
+      else:
+        self.pile.set_focus(0)
+        self.tag_focused = True
+
+  def update_summary(self):
+    self.summary.set_tag( self.tag.get_edit_text() )
+    self.summary.set_content( self.content.get_edit_text() )
+
+  def save_summary(self):
+    filepath = self.summary.save_md()
+    self.footer.set_text('Saved to: %s' % filepath)
+
+# End of App
 
 def main():
   app = App()
