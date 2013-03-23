@@ -52,9 +52,7 @@ class Summary(object):
     self._content = "\n".join(content_lines)
 
     if self._app:
-      self._app.tag.set_edit_text(self._tag)
-      self._app.content.set_edit_text(self._content)
-      self._app._content_line_count = len(content_lines)
+      self._app.summary_edit.set_edit_text(self._tag + "\n\n" + self._content)
         
   @property
   def filepath(self):
