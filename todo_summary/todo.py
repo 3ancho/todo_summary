@@ -1,10 +1,10 @@
 import datetime 
 
-class Task(object):
+class Todo(object):
   """Task class"""
 
-  def __init__(self, time_unit=0, content=""):
-    super(Task, self).__init__()
+  def __init__(self, time_unit=0, content="", app=None):
+    super(Todo, self).__init__()
 
     # datetime obj
     self._created = datetime.datetime.now()
@@ -26,6 +26,3 @@ class Task(object):
     delta = date.datetime.now() - self._created
     # return days passed
     return delta.days
-
-    
-    

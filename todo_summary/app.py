@@ -54,9 +54,9 @@ class App:
     self.summary_pile = urwid.Pile([ self.summary_edit, self.divider])
     self.summary_fill = urwid.Filler(self.summary_pile, 'top')
 
-    # TODO
+    # Todos 
     self.todos = []
-    item = TodoItem(" * " + "Default one lean this software")
+    item = urwid.AttrWrap(TodoItem(" * " + "Default one lean this software"), 'body')
     self.todos.append(item)
 
     self.todo_edit = TodoEdit(caption=u"Todo:\n", multiline=False, mode=1, app=self)
@@ -72,7 +72,13 @@ class App:
     # set main loop
     self.loop = urwid.MainLoop(self.v_frame, palette, unhandled_input=self.app_keypress)
 
-    self._todo_focus = 0
+    self._todo_focus = 0 # focus todo_edit at first place
+
+  def get_todo_focus(self):
+    return self._todo_focus
+
+  def set_todo_focus(self, i):
+    self._todo_focus = i
    
 
   def init_models(self):
@@ -82,7 +88,7 @@ class App:
 
   def run(self):
     self.todo = Todo(app=self)
-    self.summary = Summary(app=self)
+    self.summary = Summary(app=self, dirname='/Users/ruoran/Dropbox/todo_summary_doc')
     self.header.set_text(self.summary.filepath)
     self.loop.run()
 

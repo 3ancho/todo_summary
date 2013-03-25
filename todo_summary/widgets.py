@@ -54,10 +54,8 @@ class ViEdit(urwid.Edit):
     # Step 2.
     if key == 'i':
       self.mode = ViEdit.INPUT_MODE
-
       self._app.footer.set_text('-- INSERT --')
       self._app.txt.set_text('INSERT')
-
       # key control shift
       self.keypress = self.origin_keypress
 
@@ -141,58 +139,83 @@ class TodoPile(urwid.Pile):
     self._app = app
     super(TodoPile, self).__init__(widget_list, focus_item)
 
- # def keypress(self, size, key):
- #   self._app.debug("heehhheee")
- #   if key == 'k':
- #     self._app.debug("heeeee")
- #     fo = self._app.todo_pile.focus_position - 1
- #     #self._app.debug(fo + 1)
- #     self._app.todo_pile.set_focus(fo)
- #     urwid.AttrMap(self._app.todo_pile.get_focus(), 'select')
- #   elif key == 'j':
- #     self._app.debug("heeeee")
- #     fo = self._app.todo_pile.focus_position + 1
- #     #self._app.debug(fo - 1)
- #     self._app.todo_pile.set_focus(fo)
- #     urwid.AttrMap(self._app.todo_pile.get_focus(), 'select')
- #   else:
- #     return key
-
 class TodoEdit(ViEdit):
+  FOCUS = 'footer'
+  NORMAL = 'body'
+
+  # hook to app.get_todo_focus
+  def get_pile_focus(self):
+    # int
+    return self._app.get_todo_focus()
+
+  # hook to app.set_todo_focus
+  def set_pile_focus(self, i):
+    # int
+    return self._app.set_todo_focus(i)
+      
+  # change is style of an item is todo_pile when selected
+  def set_attr_for(self, i, attr=FOCUS):
+    # i int, attr string
+    # TODO check bound
+    self._app.todo_pile.widget_list[i].set_attr(attr)
+
+  # check bound for function select
+  def get_todo_length(self):
+    return len(self._app.todo_pile.widget_list)
+
+  def select(self, direction):
+    # direction = 1 down, -1 up
+    # get cur_focus item
+    cur = self.get_pile_focus()
+    if cur == 0 and (cur + direction) >= 0 \
+        and (cur + direction) < self.get_todo_length():
+      cur += direction # update 
+      self.set_attr_for(cur) # cur is updated
+      self.set_pile_focus(cur) # save this value back to app obj
+      self.pre = cur 
+
+    # > 0 is because 0, TodoEdit field, doesn't need highlight
+    elif cur !=0 and (cur + direction) > 0 \
+        and (cur + direction) < self.get_todo_length():
+      self.set_attr_for(self.pre, 'body')
+      cur += direction # update 
+      self.set_attr_for(cur) # cur is updated
+      self.set_pile_focus(cur) # save this value back to app obj
+      self.pre = cur 
+
   def cmd_keypress(self, size, key):
-    if key == 'k':
-      fo = self._app._todo_focus
-      self._app._todo_focus -= 1
-      fo -= fo
-      self._app.debug(fo + 1)
-      if fo > 0:
-        self._app.todo_pile.set_focus(fo)
-        w = self._app.todo_pile.get_focus()
-        urwid.AttrWrap(w, 'body', 'select')
-        w.set_text( "---" + str(w.get_text()) + " ---")
-        self._app.todo_pile.set_focus(0)
+    if key == 'i':
+      self._app.footer.set_text(u'-- INSERT --')
+      self._app.txt.set_text(u'INSERT')
+      self.keypress = self.origin_keypress
+      # added bellow
+      if self.pre != null:
+        self.set_attr_for(self.pre, 'body')
+        self.set_pile_focus(0) # will start from item 1 next time
+    elif key == 'esc':
+      self._app.txt.set_text(u'')
+      self._app.footer.set_text(u'')
+      self.key_buf = []
+      # added bellow
+      return key
+    elif key == 'k':
+      self.select(-1) 
     elif key == 'j':
-      fo = self._app._todo_focus
-      self._app._todo_focus += 1
-      fo += fo
-      self._app.debug(fo - 1)
-      if fo <= len(self._app.todo_pile.widget_list) and fo > 0:
-        self._app.todo_pile.set_focus(fo)
-        w = self._app.todo_pile.get_focus()
-        urwid.AttrWrap(w, 'body', 'select')
-        w.set_text( "---" + str(w.get_text()) + " ---")
-        self._app.todo_pile.set_focus(0)
+      self.select(1) 
+    elif key == 'enter':
+      # start doing the current task
+      cur = self.get_pile_focus()
+      if cur != 0:
+        self._app.footer.set_text("Task Started...")
+        pass
     else:
       return super(TodoEdit, self).cmd_keypress(size, key) 
 
   def keypress(self, size, key):
     if key == 'enter':
-      new_item = TodoItem(" * " + self.edit_text)
-      self._app.todos.insert(1, new_item)
-
-      self._app.todo_pile = urwid.Pile(self._app.todos)
-      self._app.todo_fill = urwid.Filler(self._app.todo_pile, 'top')
-      self._app.frame.set_body(self._app.todo_fill)
+      new_item = urwid.AttrWrap(TodoItem(" * " + self.edit_text), 'body')
+      self._app.todo_pile.widget_list.insert(1, new_item)
+      self.set_edit_text(u'')
     elif key == 'shift enter':
       self.insert_text(u'\n')
     else:
