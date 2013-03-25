@@ -68,6 +68,22 @@ class Summary(object):
     d['content'] = self._content
     return json.dumps(d, indent=pretty, separators=(',',': '))
 
+  def set_content_from(self, raw_content):
+    # raw_content contains both tag and content
+
+    content = []
+    tag = []
+    for line in raw_content.split("\n"):
+      words = line.split(' ')
+      # a line must have both tag and content TODO, correct it
+      if len(words) > 0 and len(words[0].strip()) >0 and words[0].strip()[0] == ':':
+        tag.append(words[0])
+        content.append(" ".join(words[1:]))
+
+    
+    self.set_content( "\n".join(content) )
+    self.set_tag( ", ".join(tag) )
+
   def save_md(self):
     with open(self.filepath, 'w') as f:
       f.write("tag:\n")

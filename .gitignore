@@ -2,8 +2,7 @@ MANIFEST
 *.pyc
 *.*.swp
 *.swp
-TodoSummary.egg-info
+*.egg-info
 *.DS_Store
 dist
-buil
-
+build

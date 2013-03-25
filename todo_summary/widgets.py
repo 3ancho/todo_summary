@@ -189,7 +189,7 @@ class TodoEdit(ViEdit):
       self._app.txt.set_text(u'INSERT')
       self.keypress = self.origin_keypress
       # added bellow
-      if self.pre != null:
+      if hasattr(self, 'pre'):
         self.set_attr_for(self.pre, 'body')
         self.set_pile_focus(0) # will start from item 1 next time
     elif key == 'esc':
@@ -202,7 +202,7 @@ class TodoEdit(ViEdit):
       self.select(-1) 
     elif key == 'j':
       self.select(1) 
-    elif key == 'enter':
+    elif key == 'enter' and not ':' in self.key_buf:
       # start doing the current task
       cur = self.get_pile_focus()
       if cur != 0:

@@ -124,6 +124,8 @@ class App:
 
       if last(2, command) == ':w': 
         self.debug("saving " + t)
+        self.update(t)
+        self.save(t)
         pass
 
       if last(2, command) == ':x' or last(3, command) ==  ':wq': 
@@ -144,8 +146,7 @@ class App:
     if t == None:
       return
     elif t == 'summary':
-      self.summary.set_tag( self.summary_edit.get_edit_text() )
-      self.summary.set_content( self.summary_edit.get_edit_text() )
+      self.summary.set_content_from( self.summary_edit.get_edit_text() )
     elif t == 'todo':
       pass
 
