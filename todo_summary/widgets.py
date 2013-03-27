@@ -202,12 +202,13 @@ class TodoEdit(ViEdit):
       self.select(-1) 
     elif key == 'j':
       self.select(1) 
-    elif key == 'enter' and not ':' in self.key_buf:
+    elif (key == 'enter' or key =='space') and not ':' in self.key_buf:
       # start doing the current task
       cur = self.get_pile_focus()
       if cur != 0:
         self._app.footer.set_text("Task Started...")
-        pass
+        self._app.count()
+        self._app.set_timer()
     else:
       return super(TodoEdit, self).cmd_keypress(size, key) 
 

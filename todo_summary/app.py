@@ -1,6 +1,9 @@
 # when using py2app, this includes a lot of packages
 import time
 import urwid 
+from sys import platform
+
+from threading import Timer
 
 from summary import Summary
 from todo import Todo
@@ -8,6 +11,7 @@ from widgets import ViEdit
 from widgets import TodoEdit
 from widgets import TodoItem
 from widgets import TodoPile
+from sound import play_sound
 
 # static util functions
 def last(n, li):
@@ -29,6 +33,13 @@ class App:
     # Two Models App deals with
     self.todos = None
     self.summary = None
+
+    if platform == "darwin":
+      from pync import Notifier
+      self._nc = Notifier
+    else:
+      self._nc = None
+      
 
     # init sound, register alerm
     # TODO
@@ -79,7 +90,6 @@ class App:
 
   def set_todo_focus(self, i):
     self._todo_focus = i
-   
 
   def init_models(self):
     # Todo
@@ -88,16 +98,18 @@ class App:
 
   def run(self):
     self.todo = Todo(app=self)
+    # TODO make this path in config file
+    # TODO create defaul for osx and linux
     self.summary = Summary(app=self, dirname='/Users/ruoran/Dropbox/todo_summary_doc')
     self.header.set_text(self.summary.filepath)
     self.loop.run()
 
+  # TODO change txt into a display window
   def debug(self, something):
     self.txt.set_text("app level: " + str(something))
 
   def app_keypress(self, key):
     # 1. Check Body = ?
-
     if self.frame.get_body() == self.todo_fill:
       target = self.todo_edit
       t = 'todo'
@@ -108,7 +120,6 @@ class App:
       return 
 
     self.debug(target.key_buf) 
-
     # 2. Handle
     if key == 'esc':
       pass
@@ -159,8 +170,47 @@ class App:
     elif t == 'todo':
       pass
 
-# End of App
+  def set_timer(self, time_in=25*60):
+    self.loop.set_alarm_in(0, self.alarm, {'opt': 'start', 'name': 'scifi_start.wav'})
+    if self._nc:
+      self._nc.notify('A task has started', title='todo_summary')
 
+    # TODO return 3 handles for app to stop it
+
+    # time passed by
+    self.loop.set_alarm_in(10*60, self.alarm, {'opt': 'middle', 'name': 'paper.wav'})
+    # time passed by
+    self.loop.set_alarm_in(20*60, self.alarm, {'opt': 'middle', 'name': 'paper.wav'})
+    # time up 
+    self.loop.set_alarm_in(25*60, self.alarm, {'opt': 'end', 'name': 'horn.wav'})
+
+  def count(self, loop=None, sec=25*60):
+    if sec == 0:
+      return
+    else:
+      self.clock_tick(sec)
+      # TODO handle for the newly set alarm
+      self.loop.set_alarm_in(1, self.count, sec-1) 
+
+  def clock_tick(self, time_left):
+    # TODO Make window better, min: sec
+    self.debug(time_left)
+
+  def alarm(self, loop, data):
+    if data['name']:
+      play_sound(data['name'])
+    if data['opt'] and data['opt'] == 'end':
+      if self._nc:
+        self._nc.notify('Time to break', title='todo_summary')
+      # TODO 
+      # 1. Notification for a 5 min break (move)
+      # 2. Make sure alarm are closed.
+      # 3. Footer set_text
+      # 4. Time unit--
+      # 5. Add time, minuste time, move to next task 
+      pass
+
+# End of App
 def main():
   app = App()
   app.run()
