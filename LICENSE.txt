@@ -1,4 +1,4 @@
-    todo_summary combines todo and summary.
+    todo-summary combines todo and summary.
 
     Copyright (C) 2013 Ruoran Wang 
 

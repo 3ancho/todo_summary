@@ -173,7 +173,7 @@ class App:
   def set_timer(self, time_in=25*60):
     self.loop.set_alarm_in(0, self.alarm, {'opt': 'start', 'name': 'scifi_start.wav'})
     if self._nc:
-      self._nc.notify('A task has started', title='todo_summary')
+      self._nc.notify('A task has started', title='todo-summary')
 
     # TODO return 3 handles for app to stop it
 
@@ -201,7 +201,7 @@ class App:
       play_sound(data['name'])
     if data['opt'] and data['opt'] == 'end':
       if self._nc:
-        self._nc.notify('Time to break', title='todo_summary')
+        self._nc.notify('Time to break', title='todo-summary')
       # TODO 
       # 1. Notification for a 5 min break (move)
       # 2. Make sure alarm are closed.
