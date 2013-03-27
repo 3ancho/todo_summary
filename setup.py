@@ -1,4 +1,4 @@
-import todo-summary
+import todo_summary
 
 try:
   from setuptools import setup
@@ -7,12 +7,12 @@ except ImportError:
 
 setup(
     name='todo-summary',
-    version=todo-summary.__version__,
+    version=todo_summary.__version__,
     author="Ruoran Wang",
     author_email='dashuiwa@gmail.com',
     url='http://pypi.python.org/pypi/todo-summary/',
-    packages=['todo-summary', 'todo-summary.test'],
-    package_data={'todo-summary': ['sound_effects/*.wav']},
+    packages=['todo_summary', 'todo_summary.test'],
+    package_data={'todo_summary': ['sound_effects/*.wav']},
     scripts=['bin/tosu'],
     license=open('LICENSE.txt').read(),
     description='todo-summary simply combines todo and summary.',
