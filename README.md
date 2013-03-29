@@ -41,3 +41,8 @@ You could spend another 1 minutes to write done a short summary for each task.
 Thus, after all, you would be able to review what you've done, for the previous week, or for a specific topic.
 
 
+
+Notes
+-----
+
+The name for this app is `todo-summary` with a dash.  But the python module name is `todo_summary` with an underscore.

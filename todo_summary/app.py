@@ -10,7 +10,6 @@ from todo import Todo
 from widgets import ViEdit
 from widgets import TodoEdit
 from widgets import TodoItem
-from widgets import TodoPile
 from sound import play_sound
 
 # static util functions
@@ -39,56 +38,55 @@ class App:
       self._nc = Notifier
     else:
       self._nc = None
-      
-
-    # init sound, register alerm
-    # TODO
 
     # reusable widges
     self.divider = urwid.Divider(u"-");
 
     # header 
     header_text = "Summary" 
-    self.header = urwid.Text("Editing: %s\n" % header_text)
-    self.v_header = urwid.AttrMap(self.header, 'header')
+    self.header = urwid.AttrWrap(urwid.Text("Editing: %s\n" % header_text), 'header')
 
-    # summary
-    self.summary_edit = ViEdit(u"Summary:\n", multiline=True, app=self)
-
-    # v_footer = footer + txt
+    # footer_pile = footer + txt
     self.footer = urwid.Text(u'')
-    self.txt = urwid.Text(u"Display") # debug
-    self.footer_pile = urwid.Pile( [self.txt, self.footer] )
-    self.v_footer = urwid.AttrMap(self.footer_pile, 'footer')
+    self.txt = urwid.Text(u'') # display
+    self.footer_pile = urwid.AttrWrap(urwid.Pile( [self.txt, self.footer] ), 'footer')
 
+    # Summary
     # summary_fill can be frame.body, option 1
-    self.summary_pile = urwid.Pile([ self.summary_edit, self.divider])
+    self.summary_edit = ViEdit(u"Summary:\n", multiline=True, app=self)
+    self.summary_pile = urwid.Pile([self.summary_edit, self.divider])
     self.summary_fill = urwid.Filler(self.summary_pile, 'top')
 
     # Todos 
+    # todo_fill can be frame.body, option 2
     self.todos = []
+    # Load defualt items
     item = urwid.AttrWrap(TodoItem(" * " + "Default one lean this software"), 'body')
     self.todos.append(item)
 
-    self.todo_edit = TodoEdit(caption=u"Todo:\n", multiline=False, mode=1, app=self)
+    # mode = 1, insert mode
+    self.todo_edit = TodoEdit(caption=u'Todo:\n', multiline=False, mode=1, app=self)
 
     self.todos.insert(0, self.todo_edit)
-    self.todo_pile = TodoPile(self.todos, app=self, focus_item=0)
+    self.todo_pile = urwid.Pile(self.todos, focus_item=0)
     self.todo_fill = urwid.Filler(self.todo_pile, 'top')
 
     # TODO chose which view to show first in cfg file
-    self.frame = urwid.Frame(self.todo_fill, header=self.v_header, footer=self.v_footer)
-    self.v_frame = urwid.AttrMap(self.frame, 'body')
+    self.frame = urwid.AttrWrap(urwid.Frame(self.todo_fill, header=self.header, footer=self.footer_pile), 'body')
+#    self.v_frame = urwid.AttrMap(self.frame, 'body')
 
     # set main loop
-    self.loop = urwid.MainLoop(self.v_frame, palette, unhandled_input=self.app_keypress)
+    self.loop = urwid.MainLoop(self.frame, palette, unhandled_input=self.app_keypress)
 
+    # used by TodoEdit in widgets.py
     self._todo_focus = 0 # focus todo_edit at first place
 
   def get_todo_focus(self):
+    # used by TodoEdit in widgets.py
     return self._todo_focus
 
   def set_todo_focus(self, i):
+    # used by TodoEdit in widgets.py
     self._todo_focus = i
 
   def init_models(self):
@@ -105,8 +103,8 @@ class App:
     self.loop.run()
 
   # TODO change txt into a display window
-  def debug(self, something):
-    self.txt.set_text("app level: " + str(something))
+  def display(self, something):
+    self.txt.set_text("Display: " + str(something))
 
   def app_keypress(self, key):
     # 1. Check Body = ?
@@ -119,7 +117,7 @@ class App:
     else:
       return 
 
-    self.debug(target.key_buf) 
+    self.display(target.key_buf) 
     # 2. Handle
     if key == 'esc':
       pass
@@ -128,13 +126,13 @@ class App:
     elif key == 'enter':
       command = target.key_buf[:-1] # pop the 'enter' key
       target.key_buf = []
-      self.debug(command)
+      self.display(command)
 
       if last(2, command) == ':q': 
         raise urwid.ExitMainLoop()
 
       if last(2, command) == ':w': 
-        self.debug("saving " + t)
+        self.display("saving " + t)
         self.update(t)
         self.save(t)
         pass
@@ -194,7 +192,7 @@ class App:
 
   def clock_tick(self, time_left):
     # TODO Make window better, min: sec
-    self.debug(time_left)
+    self.display(time_left)
 
   def alarm(self, loop, data):
     if data['name']:

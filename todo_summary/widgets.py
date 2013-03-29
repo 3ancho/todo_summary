@@ -31,7 +31,7 @@ class ViEdit(urwid.Edit):
     else:
       self.mode = ViEdit.INPUT_MODE
       self._app.footer.set_text('-- INSERT --')
-      self._app.txt.set_text('INSERT')
+      self._app.display('INSERT')
 
   def get_app(self):
     return self._app
@@ -49,19 +49,19 @@ class ViEdit(urwid.Edit):
       self.last_press = time.time()
 
     # print key pressed in mode bar
-    self._app.txt.set_text(self.key_buf[-10:])
+    self._app.display(self.key_buf[-10:])
 
     # Step 2.
     if key == 'i':
       self.mode = ViEdit.INPUT_MODE
       self._app.footer.set_text('-- INSERT --')
-      self._app.txt.set_text('INSERT')
+      self._app.display('INSERT')
       # key control shift
       self.keypress = self.origin_keypress
 
     elif key == 'esc':
       # in cmd mode just clear key buffer
-      self._app.txt.set_text('')
+      self._app.display('')
       self._app.footer.set_text('')
       self.key_buf = []
 
@@ -134,7 +134,6 @@ class ViEdit(urwid.Edit):
       return super(ViEdit, self).keypress(size, key) 
 
 class TodoPile(urwid.Pile):
-
   def __init__(self, widget_list, focus_item=None, app=None):
     self._app = app
     super(TodoPile, self).__init__(widget_list, focus_item)
@@ -186,14 +185,14 @@ class TodoEdit(ViEdit):
   def cmd_keypress(self, size, key):
     if key == 'i':
       self._app.footer.set_text(u'-- INSERT --')
-      self._app.txt.set_text(u'INSERT')
+      self._app.display(u'INSERT')
       self.keypress = self.origin_keypress
       # added bellow
       if hasattr(self, 'pre'):
         self.set_attr_for(self.pre, 'body')
         self.set_pile_focus(0) # will start from item 1 next time
     elif key == 'esc':
-      self._app.txt.set_text(u'')
+      self._app.display(u'')
       self._app.footer.set_text(u'')
       self.key_buf = []
       # added bellow
