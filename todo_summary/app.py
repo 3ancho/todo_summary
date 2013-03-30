@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*- 
+
 # when using py2app, this includes a lot of packages
 import time
 import datetime
@@ -65,6 +67,8 @@ class App:
 
     # Store alarm handles
     self._timer_handle = None
+    # you don't break until you finish a task
+    self._break = False
 
   def init_models(self):
     pass
@@ -207,7 +211,6 @@ class App:
     self._timer_handle = self.loop.set_alarm_in(0, self.timer, sec)
 
     # TODO 
-    # 1. Notification for a 5 min break (move)
     # 5. Add time, minuste time, move to next task 
 
   def remove_clock_alarm(self):
@@ -224,14 +227,28 @@ class App:
     # When called, it will register itself to be called after 1 sec.
     if sec == 0:
       self.clock_tick(sec)
-      if self._nc:
-        self._nc.notify('Time to break', title='todo-summary')
 
-      # TODO make sound in cfg
-      play_sound('horn.wav')
-      self.footer.set_text("Coffee time...")
 
       self._timer_handle = None
+
+      if not self._break:
+        # Start break timer
+        if self._nc:
+          self._nc.notify('Time to break', title='todo-summary')
+        # TODO make sound in cfg
+        play_sound('horn.wav')
+        self.footer.set_text("Coffee time...")
+
+        self._m1 = None
+        self._m2 = None
+        self._break = True
+        self._timer_handle = self.loop.set_alarm_in(1, self.timer,  10) 
+      else:
+        # break stop
+        # TODO play a sound
+        self._break = False
+        if self._nc:
+          self._nc.notify('Break done', title='todo-summary')
 
       logger = logging.getLogger('tosu')
       logger.debug('timer exit')

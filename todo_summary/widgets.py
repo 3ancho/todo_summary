@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*- 
+
 import urwid
+import logging
 import time
 from urwid.util import move_next_char
 from urwid.widget import LEFT, SPACE
@@ -209,10 +212,9 @@ class TodoEdit(ViEdit):
       self.select(-1) 
     elif key == 'j':
       self.select(1) 
-    elif (key == 'enter' or key =='space') and not ':' in self.key_buf:
+    elif key == 'enter' and not ':' in self.key_buf:
       # toggle alarms.
       mins = 0.5 
-      
       if self._app._timer_handle == None:
         # 1. Fresh start
         cur = self.get_pile_focus()
@@ -221,7 +223,6 @@ class TodoEdit(ViEdit):
           self._app.set_alarm(mins=mins)
       elif self._app._timer_handle != None:
         # 2. re-start
-        self._app.remove_sound_alarm()
         self._app.remove_clock_alarm()
 
         self._app.footer.set_text("Task Re-Started...")
@@ -229,6 +230,21 @@ class TodoEdit(ViEdit):
       else:
         # TODO 3. pause and resume
         pass
+    elif key == ' ' and not ':' in self.key_buf:
+      cur = self.get_pile_focus()
+      if cur != 0:
+        content = self._app.todo_pile.widget_list[cur].text
+        logger = logging.getLogger('tosu')
+
+        if content[:3].strip() == '*':
+          content = u' ✓ ' + content[3:]
+          self._app.todo_pile.widget_list[cur].set_text(content)
+        else:
+          content = u' * ' + content[3:]
+          self._app.todo_pile.widget_list[cur].set_text(content)
+
+    elif key == 'backspace' and not ':' in self.key_buf:
+      self._app.remove_clock_alarm()
 
     else:
       return super(TodoEdit, self).cmd_keypress(size, key) 
