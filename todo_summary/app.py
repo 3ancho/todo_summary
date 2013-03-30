@@ -1,8 +1,10 @@
 # when using py2app, this includes a lot of packages
 import time
+import datetime
+import logging
 import urwid 
-from sys import platform
 
+from sys import platform
 from threading import Timer
 
 from summary import Summary
@@ -21,7 +23,36 @@ def last(n, li):
     return ''
 
 class App:
-  def __init__(self):
+  def __init__(self, dist=None):
+    # init logger
+
+    logger = logging.getLogger('tosu')
+    hdlr = logging.FileHandler('./tosu.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    hdlr.setFormatter(formatter)
+    logger.addHandler(hdlr) 
+    logger.setLevel(logging.DEBUG)
+
+    logger.debug('init ok')
+
+    # Path for file
+    if not dist:
+      dist = "./"
+    self.dist = dist
+
+    # Two Models App deals with
+    self.todos = None
+    self.summary = None
+
+    # Sound player
+    if platform == "darwin":
+      from pync import Notifier
+      self._nc = Notifier
+    else:
+      self._nc = None
+
+    self.init_ui()
+
     palette = [
         ('body','dark blue', '', 'standout'),
         ('footer','light red', '', 'black'),
@@ -29,16 +60,16 @@ class App:
         ('select','light red', '', 'black'),
     ]
 
-    # Two Models App deals with
-    self.todos = None
-    self.summary = None
+    # set main loop
+    self.loop = urwid.MainLoop(self.frame, palette, unhandled_input=self.app_keypress)
 
-    if platform == "darwin":
-      from pync import Notifier
-      self._nc = Notifier
-    else:
-      self._nc = None
+    # Store alarm handles
+    self._timer_handle = None
 
+  def init_models(self):
+    pass
+
+  def init_ui(self):
     # reusable widges
     self.divider = urwid.Divider(u"-");
 
@@ -65,7 +96,7 @@ class App:
     self.todos.append(item)
 
     # mode = 1, insert mode
-    self.todo_edit = TodoEdit(caption=u'Todo:\n', multiline=False, mode=1, app=self)
+    self.todo_edit = TodoEdit(caption=u'Todo:\n>>> ', multiline=False, mode=1, app=self)
 
     self.todos.insert(0, self.todo_edit)
     self.todo_pile = urwid.Pile(self.todos, focus_item=0)
@@ -73,10 +104,6 @@ class App:
 
     # TODO chose which view to show first in cfg file
     self.frame = urwid.AttrWrap(urwid.Frame(self.todo_fill, header=self.header, footer=self.footer_pile), 'body')
-#    self.v_frame = urwid.AttrMap(self.frame, 'body')
-
-    # set main loop
-    self.loop = urwid.MainLoop(self.frame, palette, unhandled_input=self.app_keypress)
 
     # used by TodoEdit in widgets.py
     self._todo_focus = 0 # focus todo_edit at first place
@@ -89,20 +116,13 @@ class App:
     # used by TodoEdit in widgets.py
     self._todo_focus = i
 
-  def init_models(self):
-    # Todo
-    items = []
-    items.append(TodoItem("Default one: lean this software"))
 
   def run(self):
     self.todo = Todo(app=self)
-    # TODO make this path in config file
-    # TODO create defaul for osx and linux
-    self.summary = Summary(app=self, dirname='/Users/ruoran/Dropbox/todo_summary_doc')
+    self.summary = Summary(app=self, dirname=self.dist)
     self.header.set_text(self.summary.filepath)
     self.loop.run()
 
-  # TODO change txt into a display window
   def display(self, something):
     self.txt.set_text("Display: " + str(something))
 
@@ -168,45 +188,65 @@ class App:
     elif t == 'todo':
       pass
 
-  def set_timer(self, time_in=25*60):
-    self.loop.set_alarm_in(0, self.alarm, {'opt': 'start', 'name': 'scifi_start.wav'})
+  def set_alarm(self, mins=None):
+    if not mins:
+      sec = 25 * 60
+    else:
+      sec = mins * 60
+
+    logger = logging.getLogger('tosu')
+
+    # starting sound effect & notification
+    # the dict is passed into callback: self.alarm
+    play_sound('scifi_start.wav')
     if self._nc:
-      self._nc.notify('A task has started', title='todo-summary')
+      self._nc.notify('A task [name] has started', title='todo-summary')
 
-    # TODO return 3 handles for app to stop it
+    self._m1 = sec * 1 /3 
+    self._m2 = sec * 2 /3 
+    self._timer_handle = self.loop.set_alarm_in(0, self.timer, sec)
 
-    # time passed by
-    self.loop.set_alarm_in(10*60, self.alarm, {'opt': 'middle', 'name': 'paper.wav'})
-    # time passed by
-    self.loop.set_alarm_in(20*60, self.alarm, {'opt': 'middle', 'name': 'paper.wav'})
-    # time up 
-    self.loop.set_alarm_in(25*60, self.alarm, {'opt': 'end', 'name': 'horn.wav'})
+    # TODO 
+    # 1. Notification for a 5 min break (move)
+    # 5. Add time, minuste time, move to next task 
 
-  def count(self, loop=None, sec=25*60):
+  def remove_clock_alarm(self):
+    self.footer.set_text("Timer stopped.")
+    self.loop.remove_alarm(self._timer_handle)
+    self._timer_handle = None
+
+  def clock_tick(self, time_left):
+    # refresh display
+    self.display( str(datetime.timedelta(seconds=time_left))[2:] )
+
+  def timer(self, loop, sec):
+    # count down timer, it is a callback.
+    # When called, it will register itself to be called after 1 sec.
     if sec == 0:
+      self.clock_tick(sec)
+      if self._nc:
+        self._nc.notify('Time to break', title='todo-summary')
+
+      # TODO make sound in cfg
+      play_sound('horn.wav')
+      self.footer.set_text("Coffee time...")
+
+      self._timer_handle = None
+
+      logger = logging.getLogger('tosu')
+      logger.debug('timer exit')
       return
     else:
       self.clock_tick(sec)
-      # TODO handle for the newly set alarm
-      self.loop.set_alarm_in(1, self.count, sec-1) 
 
-  def clock_tick(self, time_left):
-    # TODO Make window better, min: sec
-    self.display(time_left)
+      # TODO make sound in cfg
+      if sec == self._m1 or sec == self._m2:
+        play_sound('paper.wav')
 
-  def alarm(self, loop, data):
-    if data['name']:
-      play_sound(data['name'])
-    if data['opt'] and data['opt'] == 'end':
-      if self._nc:
-        self._nc.notify('Time to break', title='todo-summary')
-      # TODO 
-      # 1. Notification for a 5 min break (move)
-      # 2. Make sure alarm are closed.
-      # 3. Footer set_text
-      # 4. Time unit--
-      # 5. Add time, minuste time, move to next task 
-      pass
+      logger = logging.getLogger('tosu')
+      logger.debug('timer')
+      # save handle for the newly set alarm in app
+      self._timer_handle = self.loop.set_alarm_in(1, self.timer,  sec-1) 
 
 # End of App
 def main():

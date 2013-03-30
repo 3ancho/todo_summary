@@ -122,6 +122,7 @@ class ViEdit(urwid.Edit):
       return key
 
   def keypress(self, size, key):
+    
     if key == 'esc': # 1. Change mode
       # clear buffer
       self.key_buf = []
@@ -130,6 +131,13 @@ class ViEdit(urwid.Edit):
       # key control shift
       self.origin_keypress = self.keypress
       self.keypress = self.cmd_keypress
+    elif key == 'j':
+      # jk -> esc -> enter cmd mode 
+      self.j_pressed = time.time()
+    elif key == 'k':
+      # jk -> esc -> enter cmd mode 
+      if time.time() - self.j_pressed < 200:
+        self.keypress(size, 'esc')
     else:
       return super(ViEdit, self).keypress(size, key) 
 
@@ -202,12 +210,26 @@ class TodoEdit(ViEdit):
     elif key == 'j':
       self.select(1) 
     elif (key == 'enter' or key =='space') and not ':' in self.key_buf:
-      # start doing the current task
-      cur = self.get_pile_focus()
-      if cur != 0:
-        self._app.footer.set_text("Task Started...")
-        self._app.count()
-        self._app.set_timer()
+      # toggle alarms.
+      mins = 0.5 
+      
+      if self._app._timer_handle == None:
+        # 1. Fresh start
+        cur = self.get_pile_focus()
+        if cur != 0:
+          self._app.footer.set_text("Task Started...")
+          self._app.set_alarm(mins=mins)
+      elif self._app._timer_handle != None:
+        # 2. re-start
+        self._app.remove_sound_alarm()
+        self._app.remove_clock_alarm()
+
+        self._app.footer.set_text("Task Re-Started...")
+        self._app.set_alarm(mins=mins)
+      else:
+        # TODO 3. pause and resume
+        pass
+
     else:
       return super(TodoEdit, self).cmd_keypress(size, key) 
 

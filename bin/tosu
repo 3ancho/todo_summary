@@ -1,21 +1,25 @@
 #!/usr/bin/env python
 
+import os
 import ConfigParser
+
 from todo_summary.app import App
 
-config = """
-[tosu]
-user=ruoran
-md_folder=/tmp
-[todo]
-
-[summary]
-"""
-
-
 def main():
-  con
-  app = App()
+  config = ConfigParser.ConfigParser()
+  config_file = os.path.expanduser('~/.tosuconf')
+  dist = os.path.expanduser('~/Desktop')
+  time = 25 
+  if os.path.exists(config_file):
+    config.read(config_file)
+    try:
+      dist = config.get('tosu', 'dist')
+      time = config.get('tosu', 'time')
+    except ConfigParser.NoOptionError:
+      print "using default"
+      pass 
+
+  app = App(dist)
   app.run()
 
 if __name__ == '__main__':

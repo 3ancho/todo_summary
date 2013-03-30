@@ -5,7 +5,7 @@ import os
 class Summary(object):
   """docstring for Summary"""
 
-  def __init__(self, app=None, content="", tag=[], dirname="./" ):
+  def __init__(self, app=None, content="", tag=[], dirname=None ):
     super(Summary, self).__init__()
     self._app = app # a handle to editor
     self._tag = tag # a list
