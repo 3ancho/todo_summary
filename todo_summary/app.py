@@ -106,9 +106,9 @@ class App:
       self.todos = pickle.load(open(self._pickle_file, 'rb'))
 
     for obj in reversed(self.todos):
-      new_view_item = urwid.AttrWrap(TodoItem(u' * ' + obj.content), 'body')
-      new_view_item.set_obj(obj)
-      self.todos_view.append(new_view_item)
+      if obj._done == False:
+        new_view_item = urwid.AttrWrap(TodoItem(str(obj), data=obj), 'body')
+        self.todos_view.append(new_view_item)
 
     # mode = 1, insert mode
     self.todo_edit = TodoEdit(caption=u'Todo:\n>>> ', multiline=False, mode=1, app=self)
@@ -173,6 +173,9 @@ class App:
         pass
 
       if last(2, command) == ':x' or last(3, command) ==  ':wq': 
+        self.display("saving " + t)
+        self.update(t)
+        self.save(t)
         time.sleep(0.2) # flash the message 
         raise urwid.ExitMainLoop()
 
@@ -248,6 +251,11 @@ class App:
 
       if not self._break:
         # Start break timer
+        cur = self.get_todo_focus()
+        if cur != 0:
+          view = self.todo_pile.widget_list[cur]
+          view.update_time()
+
         if self._nc:
           self._nc.notify('Time to break', title='todo-summary')
         # TODO make sound in cfg
@@ -295,8 +303,8 @@ def main():
       temp_dir = config.get('tosu', 'dir')
       if os.path.isdir(temp_dir):
         dir = temp_dir
-      work_mins = config.get('tosu', 'work_mins')
-      rest_mins = config.get('tosu', 'rest_mins')
+      work_mins = config.getint('tosu', 'work_mins')
+      rest_mins = config.getint('tosu', 'rest_mins')
     except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
       pass
       #print "using default"

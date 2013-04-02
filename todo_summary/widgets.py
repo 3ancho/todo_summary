@@ -200,7 +200,7 @@ class TodoEdit(ViEdit):
   def cmd_keypress(self, size, key):
     if key == 'i':
       self._app.footer.set_text(u'-- INSERT --')
-      self._app.display(u'INSERT')
+#      self._app.display(u'INSERT')
       self.keypress = self.origin_keypress
       # added bellow
       if hasattr(self, 'pre'):
@@ -235,24 +235,12 @@ class TodoEdit(ViEdit):
     elif key == ' ' and not ':' in self.key_buf:
       cur = self.get_pile_focus()
       if cur != 0:
-        content = self._app.todo_pile.widget_list[cur].text
-        logger = logging.getLogger('tosu')
-        
         view = self._app.todo_pile.widget_list[cur]
-        if content[:3].strip() == '*':
-          content = u' ✓ ' + content[3:]
-          view.set_text(content)
-          view.toggle_done()
-        else:
-          content = u' * ' + content[3:]
-          view.set_text(content)
-          view.toggle_done()
+        view.toggle_done()
         # TODO sort todo and done task
        
-
     elif key == 'backspace' and not ':' in self.key_buf:
       self._app.remove_clock_alarm()
-
     else:
       return super(TodoEdit, self).cmd_keypress(size, key) 
 
@@ -274,12 +262,10 @@ class TodoEdit(ViEdit):
       self._app.todos.append(todo_obj)
         
       # Update UI
-      new_item = urwid.AttrWrap(TodoItem(u' * ' + self.edit_text), 'body')
+      new_view_item = urwid.AttrWrap(TodoItem(str(todo_obj), data=todo_obj), 'body')
 
-      # bind ui to data 
-      new_item.set_obj(todo_obj)
-
-      self._app.todo_pile.widget_list.insert(1, new_item)
+      # 0 is the input field
+      self._app.todo_pile.widget_list.insert(1, new_view_item)
       self.set_edit_text(u'')
 
     elif key == 'shift enter':
@@ -288,6 +274,13 @@ class TodoEdit(ViEdit):
       return super(TodoEdit, self).keypress(size, key) 
 
 class TodoItem(urwid.Text):
+
+  # overwrite
+  def __init__(self, markup, align=LEFT, wrap=SPACE, layout=None, data=None,):
+    # data obj
+    if data:
+      self.set_obj(data)
+    super(TodoItem, self).__init__(markup, align=LEFT, wrap=SPACE, layout=None)
 
   # TODO make this more usefull.   progress 1/3
 
@@ -301,10 +294,19 @@ class TodoItem(urwid.Text):
       return None
 
   def toggle_done(self):
+    # this will change data status first and also change UI
     if self.get_obj():
       self.get_obj().toggle_done()
     else:
       return
+
+  def update_time(self):
+    self.obj.update_time()
+    self._change_mark()
+
+  def _change_mark(self):
+    # call chain started from toggle_done, then called from data binded
+    self.set_text(str(self.obj))
 
   def set_obj(self, obj):
     self.obj = obj
