@@ -4,22 +4,29 @@ import os
 import ConfigParser
 
 from todo_summary.app import App
+from todo_summary.todo import Todo
 
 def main():
   config = ConfigParser.ConfigParser()
   config_file = os.path.expanduser('~/.tosuconf')
-  dist = os.path.expanduser('~/Desktop')
-  time = 25 
+
+  dir = os.path.expanduser('~/Desktop')
+  work_mins = 25
+  rest_mins = 5
+
   if os.path.exists(config_file):
     config.read(config_file)
     try:
-      dist = config.get('tosu', 'dist')
-      time = config.get('tosu', 'time')
-    except ConfigParser.NoOptionError:
-      print "using default"
-      pass 
+      temp_dir = config.get('tosu', 'dir')
+      if os.path.isdir(temp_dir):
+        dir = temp_dir
+      work_mins = config.getint('tosu', 'work_mins')
+      rest_mins = config.getint('tosu', 'rest_mins')
+    except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
+      pass
+      #print "using default"
 
-  app = App(dist)
+  app = App(dir, work_mins, rest_mins)
   app.run()
 
 if __name__ == '__main__':

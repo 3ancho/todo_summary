@@ -13,7 +13,7 @@ from sys import platform
 from threading import Timer
 
 from summary import Summary
-from todo import Todo
+from todo_summary.todo import Todo
 from widgets import ViEdit
 from widgets import TodoEdit
 from widgets import TodoItem
@@ -26,6 +26,13 @@ def last(n, li):
     return ''.join(li[-1*n:])
   else:
     return ''
+
+class MyUnpickler(pickle.Unpickler): 
+  def find_class(self, module, name):
+    if module == "todo" and name == "Todo":
+      return Todo 
+    else:
+      return pickle.Unpickler.find_class(self, module, name)
 
 class App:
   def __init__(self, dir="./", work_mins=25, rest_mins=5):
@@ -103,7 +110,9 @@ class App:
 
     self._pickle_file = os.path.join(self._dir, 'tosu_data.pickle')
     if os.path.exists(self._pickle_file):
-      self.todos = pickle.load(open(self._pickle_file, 'rb'))
+      #self.todos = pickle.load(open(self._pickle_file, 'rb'))
+      self.todos = MyUnpickler(open(self._pickle_file)).load() 
+
 
     for obj in reversed(self.todos):
       if obj._done == False:
