@@ -5,14 +5,14 @@ import os
 class Summary(object):
   """docstring for Summary"""
 
-  def __init__(self, app=None, content="", tag=[], dirname=None ):
+  def __init__(self, app=None, content=u'', tag=[], dirname=None ):
     super(Summary, self).__init__()
     self._app = app # a handle to editor
     self._tag = tag # a list
     self._content = content
     self._created = datetime.datetime.now()
     self._dirname = dirname
-    filename = "%s.md" % self._created.strftime('%d_%m_%Y')
+    filename = '%s.md' % self._created.strftime('%Y_%m_%d')
     self._filepath = os.path.join(self._dirname, filename)
 
     if os.path.exists(self._filepath):
@@ -48,11 +48,11 @@ class Summary(object):
         if line == 'content:':
           load_content = True
 
-    self._tag = " ".join(tag_line)
-    self._content = "\n".join(content_lines)
+    self._tag = u' '.join(tag_line)
+    self._content = u'\n'.join(content_lines)
 
     if self._app:
-      self._app.summary_edit.set_edit_text(self._tag + "\n\n" + self._content)
+      self._app.summary_edit.set_edit_text(self._tag + u'\n\n' + self._content)
         
   @property
   def filepath(self):
@@ -73,26 +73,25 @@ class Summary(object):
 
     content = []
     tag = []
-    for line in raw_content.split("\n"):
+    for line in raw_content.split('\n'):
       words = line.split(' ')
       # a line must have both tag and content TODO, correct it
       if len(words) > 0 and len(words[0].strip()) >0 and words[0].strip()[0] == ':':
         tag.append(words[0])
-        content.append(" ".join(words[1:]))
+        content.append(u' '.join(words[1:]))
 
-    
-    self.set_content( "\n".join(content) )
-    self.set_tag( ", ".join(tag) )
+    self.set_content( u'\n'.join(content) )
+    self.set_tag( u', '.join(tag) )
 
   def save_md(self):
     with open(self.filepath, 'w') as f:
-      f.write("tag:\n")
-      f.write("-----\n\n")
+      f.write('tag:\n')
+      f.write('-----\n\n')
       f.write(self._tag)
-      f.write("\n\ncontent:\n")
-      f.write("--------\n\n")
+      f.write('\n\ncontent:\n')
+      f.write('--------\n\n')
       f.write(self._content)
-    return "saved to file %s" % format(self._filepath)
+    return 'saved to file %s' % format(self._filepath)
  
-  def save_pickle(self, tag="", content=""):
+  def save_pickle(self, tag='', content=''):
     pass

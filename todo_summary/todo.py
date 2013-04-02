@@ -4,7 +4,7 @@ import datetime
 class Todo(object):
   """Task class"""
 
-  def __init__(self, time_unit=0, content="", app=None):
+  def __init__(self, time_unit=0, content=u'', app=None):
     super(Todo, self).__init__()
 
     # datetime obj
@@ -55,9 +55,9 @@ class Todo(object):
       return u'*'
 
   def __unicode__(self):
-    percent = (u" %d/%d" % (self._done_unit, self._time_unit)).ljust(5)
+    percent = (u' %d/%d' % (self._done_unit, self._time_unit)).ljust(5)
     
-    return u" %s %s %s" % (self.mark, percent, self.content)
+    return u' %s %s %s' % (self.mark, percent, self.content)
 
   def __str__(self):
-        return unicode(self).encode('utf-8')
+    return unicode(self).encode('utf-8')

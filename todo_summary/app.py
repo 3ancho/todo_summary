@@ -89,8 +89,8 @@ class App:
     self.divider = urwid.Divider(u"-");
 
     # header 
-    header_text = "Summary" 
-    self.header = urwid.AttrWrap(urwid.Text("Editing: %s\n" % header_text), 'header')
+    header_text = u'Summary' 
+    self.header = urwid.AttrWrap(urwid.Text(u'Editing: %s\n' % header_text), 'header')
 
     # footer_pile = footer + txt
     self.footer = urwid.Text(u'')
@@ -99,7 +99,7 @@ class App:
 
     # Summary
     # summary_fill can be frame.body, option 1
-    self.summary_edit = ViEdit(u"Summary:\n", multiline=True, app=self)
+    self.summary_edit = ViEdit(u'Summary:\n', multiline=True, app=self)
     self.summary_pile = urwid.Pile([self.summary_edit, self.divider])
     self.summary_fill = urwid.Filler(self.summary_pile, 'top')
 
@@ -148,7 +148,7 @@ class App:
     self.loop.run()
 
   def display(self, something):
-    self.txt.set_text("Display: " + str(something))
+    self.txt.set_text(u'Display: ' + str(something))
 
   def app_keypress(self, key):
     # 1. Check Body = ?
@@ -176,13 +176,13 @@ class App:
         raise urwid.ExitMainLoop()
 
       if last(2, command) == ':w': 
-        self.display("saving " + t)
+        self.display(u'saving ' + t)
         self.update(t)
         self.save(t)
         pass
 
       if last(2, command) == ':x' or last(3, command) ==  ':wq': 
-        self.display("saving " + t)
+        self.display(u'saving ' + t)
         self.update(t)
         self.save(t)
         time.sleep(0.2) # flash the message 
@@ -193,6 +193,8 @@ class App:
         self.todo_edit.keypress = self.todo_edit.cmd_keypress
 
       if last(3, command) == ':su' or last(2, command) == ':s':
+        new_text = u'\n'.join([str(todo_task).decode('utf8') for todo_task in self.todos if todo_task._done == True])
+        self.summary_edit.set_edit_text(new_text)
         self.frame.set_body(self.summary_fill)
         self.summary_edit.keypress = self.summary_edit.cmd_keypress
     # End elif 'enter'
@@ -211,7 +213,7 @@ class App:
       return
     elif t == 'summary':
       filepath = self.summary.save_md()
-      self.footer.set_text('Saved to: %s' % filepath)
+      self.footer.set_text(u'Saved to: %s' % filepath)
     elif t == 'todo':
       self.footer.set_text(", ".join([item.content for item in self.todos]))
 
@@ -243,7 +245,7 @@ class App:
     # 5. Add time, minuste time, move to next task 
 
   def remove_clock_alarm(self):
-    self.footer.set_text("Timer stopped.")
+    self.footer.set_text(u'Timer stopped.')
     self.loop.remove_alarm(self._timer_handle)
     self._timer_handle = None
 
