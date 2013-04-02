@@ -25,7 +25,7 @@ class ViEdit(urwid.Edit):
     self.last_press = last_press
     self.key_buf = []
 
-    self.j_pressed = 0 
+    self.j_pressed = 598233600 
     self._app = app
     super(ViEdit, self).__init__(caption, edit_text, multiline,
            align, wrap, allow_tab,
@@ -143,8 +143,10 @@ class ViEdit(urwid.Edit):
       self.j_pressed = time.time()
     elif key == 'k':
       # jk -> esc -> enter cmd mode 
-      if time.time() - self.j_pressed < 200:
+      if (time.time() - self.j_pressed) < 0.2:
         self.keypress(size, 'esc')
+      else:
+        return super(ViEdit, self).keypress(size, key) 
     else:
       return super(ViEdit, self).keypress(size, key) 
 
