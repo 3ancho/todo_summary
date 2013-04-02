@@ -15,11 +15,22 @@ class Todo(object):
     # over time
     self._ot = 0
 
-    # done unit
-    self._done = 0
+    # done time
+    self._dt = 0
 
     # text
     self.content = content
+
+    self.view = None
+
+    self._done = False
+
+  def toggle_done(self):
+    if self._done:
+      self._done = False
+    else:
+      self._done = True
+    
 
   def days_passed(self): 
     # delta, datetime.timedelta obj

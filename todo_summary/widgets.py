@@ -6,6 +6,8 @@ import time
 from urwid.util import move_next_char
 from urwid.widget import LEFT, SPACE
 
+from todo import Todo
+
 # Vi mode Edit box
 class ViEdit(urwid.Edit):
   CMD_MODE = 0
@@ -22,6 +24,8 @@ class ViEdit(urwid.Edit):
     self.timeout = timeout
     self.last_press = last_press
     self.key_buf = []
+
+    self.j_pressed = 0 
     self._app = app
     super(ViEdit, self).__init__(caption, edit_text, multiline,
            align, wrap, allow_tab,
@@ -214,19 +218,17 @@ class TodoEdit(ViEdit):
       self.select(1) 
     elif key == 'enter' and not ':' in self.key_buf:
       # toggle alarms.
-      mins = 0.5 
       if self._app._timer_handle == None:
         # 1. Fresh start
         cur = self.get_pile_focus()
         if cur != 0:
           self._app.footer.set_text("Task Started...")
-          self._app.set_alarm(mins=mins)
+          self._app.set_alarm()
       elif self._app._timer_handle != None:
         # 2. re-start
         self._app.remove_clock_alarm()
-
         self._app.footer.set_text("Task Re-Started...")
-        self._app.set_alarm(mins=mins)
+        self._app.set_alarm()
       else:
         # TODO 3. pause and resume
         pass
@@ -235,13 +237,18 @@ class TodoEdit(ViEdit):
       if cur != 0:
         content = self._app.todo_pile.widget_list[cur].text
         logger = logging.getLogger('tosu')
-
+        
+        view = self._app.todo_pile.widget_list[cur]
         if content[:3].strip() == '*':
           content = u' ✓ ' + content[3:]
-          self._app.todo_pile.widget_list[cur].set_text(content)
+          view.set_text(content)
+          view.toggle_done()
         else:
           content = u' * ' + content[3:]
-          self._app.todo_pile.widget_list[cur].set_text(content)
+          view.set_text(content)
+          view.toggle_done()
+        # TODO sort todo and done task
+       
 
     elif key == 'backspace' and not ':' in self.key_buf:
       self._app.remove_clock_alarm()
@@ -251,17 +258,57 @@ class TodoEdit(ViEdit):
 
   def keypress(self, size, key):
     if key == 'enter':
-      new_item = urwid.AttrWrap(TodoItem(" * " + self.edit_text), 'body')
+      # Create obj 
+      unit = self.edit_text.lstrip().split(u' ')[0]
+
+      if unit.isdigit():
+        start_index = self.edit_text.find(unit) + len(unit)
+        content = self.edit_text[start_index:].strip()
+        unit = int(unit)
+      else:
+        content = self.edit_text.strip()
+        unit = 0
+
+      # TODO Order app.todos and Order views
+      todo_obj = Todo(unit, content)
+      self._app.todos.append(todo_obj)
+        
+      # Update UI
+      new_item = urwid.AttrWrap(TodoItem(u' * ' + self.edit_text), 'body')
+
+      # bind ui to data 
+      new_item.set_obj(todo_obj)
+
       self._app.todo_pile.widget_list.insert(1, new_item)
       self.set_edit_text(u'')
+
     elif key == 'shift enter':
       self.insert_text(u'\n')
     else:
       return super(TodoEdit, self).keypress(size, key) 
 
 class TodoItem(urwid.Text):
+
+  # TODO make this more usefull.   progress 1/3
+
   def selectable(self):
     return True
+ 
+  def get_obj(self):
+    if hasattr(self, 'obj'):
+      return self.obj
+    else:
+      return None
+
+  def toggle_done(self):
+    if self.get_obj():
+      self.get_obj().toggle_done()
+    else:
+      return
+
+  def set_obj(self, obj):
+    self.obj = obj
+    obj.view = self
 
   def keypress(self, size, key):
     return key

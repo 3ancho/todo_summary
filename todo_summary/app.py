@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*- 
 
 # when using py2app, this includes a lot of packages
+import os
 import time
-import datetime
-import logging
 import urwid 
+import pickle
+import logging
+import datetime
+import ConfigParser
 
 from sys import platform
 from threading import Timer
@@ -25,22 +28,10 @@ def last(n, li):
     return ''
 
 class App:
-  def __init__(self, dist=None):
-    # init logger
-
-    logger = logging.getLogger('tosu')
-    hdlr = logging.FileHandler('./tosu.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    hdlr.setFormatter(formatter)
-    logger.addHandler(hdlr) 
-    logger.setLevel(logging.DEBUG)
-
-    logger.debug('init ok')
-
-    # Path for file
-    if not dist:
-      dist = "./"
-    self.dist = dist
+  def __init__(self, dir="./", work_mins=25, rest_mins=5):
+    self._dir = dir
+    self._work_mins = work_mins
+    self._rest_mins = rest_mins
 
     # Two Models App deals with
     self.todos = None
@@ -70,6 +61,19 @@ class App:
     # you don't break until you finish a task
     self._break = False
 
+  def init_logger(self):
+    # init logger
+    # TODO get name, instead of hardcode
+    logger = logging.getLogger('tosu')
+    # TODO path should be defined in cfg file
+    hdlr = logging.FileHandler('./tosu.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    hdlr.setFormatter(formatter)
+    logger.addHandler(hdlr) 
+    logger.setLevel(logging.DEBUG)
+
+    logger.debug('init ok')
+
   def init_models(self):
     pass
 
@@ -95,15 +99,23 @@ class App:
     # Todos 
     # todo_fill can be frame.body, option 2
     self.todos = []
-    # Load defualt items
-    item = urwid.AttrWrap(TodoItem(" * " + "Default one lean this software"), 'body')
-    self.todos.append(item)
+    self.todos_view = []
+
+    self._pickle_file = os.path.join(self._dir, 'tosu_data.pickle')
+    if os.path.exists(self._pickle_file):
+      self.todos = pickle.load(open(self._pickle_file, 'rb'))
+
+    for obj in reversed(self.todos):
+      new_view_item = urwid.AttrWrap(TodoItem(u' * ' + obj.content), 'body')
+      new_view_item.set_obj(obj)
+      self.todos_view.append(new_view_item)
 
     # mode = 1, insert mode
     self.todo_edit = TodoEdit(caption=u'Todo:\n>>> ', multiline=False, mode=1, app=self)
 
-    self.todos.insert(0, self.todo_edit)
-    self.todo_pile = urwid.Pile(self.todos, focus_item=0)
+    # TODO change this pile, need to change many parts
+    self.todos_view.insert(0, self.todo_edit)
+    self.todo_pile = urwid.Pile(self.todos_view, focus_item=0)
     self.todo_fill = urwid.Filler(self.todo_pile, 'top')
 
     # TODO chose which view to show first in cfg file
@@ -120,10 +132,9 @@ class App:
     # used by TodoEdit in widgets.py
     self._todo_focus = i
 
-
   def run(self):
     self.todo = Todo(app=self)
-    self.summary = Summary(app=self, dirname=self.dist)
+    self.summary = Summary(app=self, dirname=self._dir)
     self.header.set_text(self.summary.filepath)
     self.loop.run()
 
@@ -190,13 +201,19 @@ class App:
       filepath = self.summary.save_md()
       self.footer.set_text('Saved to: %s' % filepath)
     elif t == 'todo':
-      pass
+      self.footer.set_text(", ".join([item.content for item in self.todos]))
 
-  def set_alarm(self, mins=None):
-    if not mins:
+      for item in self.todos:
+        item.view = None
+
+      pickle.dump(self.todos, open(self._pickle_file, 'wb'))
+
+  def set_alarm(self):
+    # Read mins from config file
+    if not self._work_mins:
       sec = 25 * 60
     else:
-      sec = mins * 60
+      sec = self._work_mins * 60
 
     logger = logging.getLogger('tosu')
 
@@ -227,8 +244,6 @@ class App:
     # When called, it will register itself to be called after 1 sec.
     if sec == 0:
       self.clock_tick(sec)
-
-
       self._timer_handle = None
 
       if not self._break:
@@ -242,10 +257,10 @@ class App:
         self._m1 = None
         self._m2 = None
         self._break = True
-        self._timer_handle = self.loop.set_alarm_in(1, self.timer,  10) 
+        self._timer_handle = self.loop.set_alarm_in(1, self.timer, self._rest_mins * 60) 
       else:
         # break stop
-        # TODO play a sound
+        # TODO play a different sound
         self._break = False
         if self._nc:
           self._nc.notify('Break done', title='todo-summary')
@@ -267,7 +282,26 @@ class App:
 
 # End of App
 def main():
-  app = App()
+  config = ConfigParser.ConfigParser()
+  config_file = os.path.expanduser('~/.tosuconf')
+
+  dir = os.path.expanduser('~/Desktop')
+  work_mins = 25
+  rest_mins = 5
+
+  if os.path.exists(config_file):
+    config.read(config_file)
+    try:
+      temp_dir = config.get('tosu', 'dir')
+      if os.path.isdir(temp_dir):
+        dir = temp_dir
+      work_mins = config.get('tosu', 'work_mins')
+      rest_mins = config.get('tosu', 'rest_mins')
+    except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
+      pass
+      #print "using default"
+
+  app = App(dir, work_mins, rest_mins)
   app.run()
 
 if __name__ == '__main__':
