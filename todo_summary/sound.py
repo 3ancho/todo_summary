@@ -8,7 +8,7 @@ def play_sound(audio_file):
   if platform == "darwin":  
     p = subprocess.Popen(["afplay", audio_file])
   elif platform == "linux2":
-    p = subprocess.Popen(["aplay", audio_file])
+    p = subprocess.Popen(["aplay", audio_file, "-q"])
 #  p.terminate()
 
 def main():
