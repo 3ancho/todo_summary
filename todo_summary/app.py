@@ -2,11 +2,13 @@
 
 # when using py2app, this includes a lot of packages
 import os
+import sys
 import time
 import urwid 
 import pickle
 import logging
 import datetime
+import notifier
 import ConfigParser
 
 from sys import platform
@@ -34,6 +36,10 @@ class MyUnpickler(pickle.Unpickler):
     else:
       return pickle.Unpickler.find_class(self, module, name)
 
+
+  def notify(self):
+    self._nc.notify('Break done', title='todo-summary')
+
 class App:
   def __init__(self, dir="./", work_mins=25, rest_mins=5):
     self._dir = dir
@@ -44,10 +50,10 @@ class App:
     self.todos = None
     self.summary = None
 
-    # Sound player
-    if platform == "darwin":
-      from pync import Notifier
-      self._nc = Notifier
+    if platform == 'darwin':
+      self._nc = notifier.OSXNotifier() 
+    elif platform == 'linux2':
+      self._nc = notifier.UbuntuNotifier()
     else:
       self._nc = None
 
@@ -276,6 +282,7 @@ class App:
         self._m1 = None
         self._m2 = None
         self._break = True
+        # Start break timer
         self._timer_handle = self.loop.set_alarm_in(1, self.timer, self._rest_mins * 60) 
       else:
         # break stop
@@ -283,6 +290,7 @@ class App:
         self._break = False
         if self._nc:
           self._nc.notify('Break done', title='todo-summary')
+        play_sound('paper.wav')
 
       logger = logging.getLogger('tosu')
       logger.debug('timer exit')
