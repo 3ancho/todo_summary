@@ -101,8 +101,9 @@ class App:
 
     # Summary
     # summary_fill can be frame.body, option 1
-    self.summary_edit = ViEdit(u'Summary:\n', multiline=True, app=self)
-    self.summary_pile = urwid.Pile([self.summary_edit, self.divider])
+#    self.summary_edit = ViEdit(u'Summary:\n', multiline=True, app=self)
+#    self.summary_edit2 = ViEdit(u'Summary2:\n', multiline=True, app=self)
+    self.summary_pile = urwid.Pile([])
     self.summary_fill = urwid.Filler(self.summary_pile, 'top')
 
     # Todos 
@@ -157,7 +158,7 @@ class App:
       target = self.todo_edit
       t = 'todo'
     elif self.frame.get_body() == self.summary_fill:
-      target = self.summary_edit
+      target = self.summary_pile.focus_item
       t = 'summary'
     else:
       return 
@@ -166,7 +167,14 @@ class App:
     if key == 'esc':
       pass
     elif key == 'tab':
-      pass
+      cur = self.summary_pile.focus_position
+      summary_pile_len = len(self.summary_pile.widget_list)
+
+      if cur == summary_pile_len - 1:
+        self.summary_pile.focus_position = 0
+      else:
+        self.summary_pile.focus_position = cur + 1
+
     elif key == 'enter':
       command = target.key_buf[:-1] # pop the 'enter' key
       target.key_buf = []
@@ -194,10 +202,18 @@ class App:
       if last(3, command) == ':su' or last(2, command) == ':s':
         self.update(t)
         self.save(t)
+        ViEdit(u'Summary2:\n', multiline=True, app=self)
         new_text = u'\n'.join([str(todo_task).decode('utf8') for todo_task in self.todos if todo_task._done == True])
-        self.summary_edit.set_edit_text(new_text)
+
+        summary_list = []
+        for todo_task in self.todos:
+          if todo_task._done: 
+            summary_list.append(ViEdit(todo_task.content + '\n', multiline=True, app=self))
+
+        self.summary_pile = urwid.Pile(summary_list)
+        self.summary_fill = urwid.Filler(self.summary_pile, 'top')
         self.frame.set_body(self.summary_fill)
-        self.summary_edit.keypress = self.summary_edit.cmd_keypress
+        #self.summary_edit.keypress = self.summary_edit.cmd_keypress
     # End elif 'enter'
   # End func
 
@@ -205,7 +221,8 @@ class App:
     if t == None:
       return
     elif t == 'summary':
-      self.summary.set_content_from( self.summary_edit.get_edit_text() )
+      content = u'\n\n'.join([su.edit_text for su in self.summary_pile.widget_list])
+      self.summary.set_content( content )
     elif t == 'todo':
       pass
 

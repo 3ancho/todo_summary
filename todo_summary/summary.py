@@ -15,11 +15,11 @@ class Summary(object):
     filename = '%s.md' % self._created.strftime('%Y_%m_%d')
     self._filepath = os.path.join(self._dirname, filename)
 
-    if os.path.exists(self._filepath):
-      self._exists = True
-      self.load_from(self._filepath)
-    else:
-      self._exists = False
+    #if os.path.exists(self._filepath):
+    #  self._exists = True
+    #  self.load_from(self._filepath)
+    #else:
+    #  self._exists = False
 
   def set_tag(self, tag):
     self._tag = tag
@@ -85,11 +85,6 @@ class Summary(object):
 
   def save_md(self):
     with open(self.filepath, 'w') as f:
-      f.write('tag:\n')
-      f.write('-----\n\n')
-      f.write(self._tag)
-      f.write('\n\ncontent:\n')
-      f.write('--------\n\n')
       f.write(self._content)
     return 'saved to file %s' % format(self._filepath)
  

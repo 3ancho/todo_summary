@@ -47,6 +47,10 @@ class Todo(object):
   def update_time(self):
     self._done_unit += 1
 
+  def to_edit(self):
+    title = self.content 
+    return title
+
   @property
   def mark(self):
     if self._done:
@@ -61,3 +65,5 @@ class Todo(object):
 
   def __str__(self):
     return unicode(self).encode('utf-8')
+
+
