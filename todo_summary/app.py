@@ -8,18 +8,18 @@ import urwid
 import pickle
 import logging
 import datetime
-import notifier
 import ConfigParser
 
 from sys import platform
 from threading import Timer
 
 from summary import Summary
-from todo_summary.todo import Todo
+from todo import Todo
 from widgets import ViEdit
 from widgets import TodoEdit
 from widgets import TodoItem
 from sound import play_sound
+from notifier import OSXNotifier, UbuntuNotifier
 
 # static util functions
 def last(n, li):
@@ -31,17 +31,13 @@ def last(n, li):
 
 class MyUnpickler(pickle.Unpickler): 
   def find_class(self, module, name):
-    if module == "todo" and name == "Todo":
+    if module == 'todo' and name == 'Todo':
       return Todo 
     else:
       return pickle.Unpickler.find_class(self, module, name)
 
-
-  def notify(self):
-    self._nc.notify('Break done', title='todo-summary')
-
 class App:
-  def __init__(self, dir="./", work_mins=25, rest_mins=5):
+  def __init__(self, dir='./', work_mins=25, rest_mins=5):
     self._dir = dir
     self._work_mins = work_mins
     self._rest_mins = rest_mins
@@ -51,9 +47,9 @@ class App:
     self.summary = None
 
     if platform == 'darwin':
-      self._nc = notifier.OSXNotifier() 
+      self._nc = OSXNotifier() 
     elif platform == 'linux2':
-      self._nc = notifier.UbuntuNotifier()
+      self._nc = UbuntuNotifier()
     else:
       self._nc = None
 
@@ -92,7 +88,7 @@ class App:
 
   def init_ui(self):
     # reusable widges
-    self.divider = urwid.Divider(u"-");
+    self.divider = urwid.Divider(u'-');
 
     # header 
     header_text = u'Summary' 
@@ -118,7 +114,6 @@ class App:
     if os.path.exists(self._pickle_file):
       #self.todos = pickle.load(open(self._pickle_file, 'rb'))
       self.todos = MyUnpickler(open(self._pickle_file)).load() 
-
 
     for obj in reversed(self.todos):
       if obj._done == False:
@@ -167,7 +162,6 @@ class App:
     else:
       return 
 
-    self.display(target.key_buf) 
     # 2. Handle
     if key == 'esc':
       pass
@@ -176,29 +170,30 @@ class App:
     elif key == 'enter':
       command = target.key_buf[:-1] # pop the 'enter' key
       target.key_buf = []
-      self.display(command)
+      # self.display(command)
 
       if last(2, command) == ':q': 
         raise urwid.ExitMainLoop()
 
       if last(2, command) == ':w': 
-        self.display(u'saving ' + t)
         self.update(t)
         self.save(t)
-        pass
 
       if last(2, command) == ':x' or last(3, command) ==  ':wq': 
-        self.display(u'saving ' + t)
         self.update(t)
         self.save(t)
         time.sleep(0.2) # flash the message 
         raise urwid.ExitMainLoop()
 
       if last(3, command) == ':to' or last(2, command) == ':t':
+        self.update(t)
+        self.save(t)
         self.frame.set_body(self.todo_fill)
         self.todo_edit.keypress = self.todo_edit.cmd_keypress
 
       if last(3, command) == ':su' or last(2, command) == ':s':
+        self.update(t)
+        self.save(t)
         new_text = u'\n'.join([str(todo_task).decode('utf8') for todo_task in self.todos if todo_task._done == True])
         self.summary_edit.set_edit_text(new_text)
         self.frame.set_body(self.summary_fill)
@@ -219,9 +214,9 @@ class App:
       return
     elif t == 'summary':
       filepath = self.summary.save_md()
-      self.footer.set_text(u'Saved to: %s' % filepath)
+      self.footer.set_text(u'Summary saved to: %s' % filepath)
     elif t == 'todo':
-      self.footer.set_text(", ".join([item.content for item in self.todos]))
+      self.footer.set_text(u'todo saved')
 
       for item in self.todos:
         item.view = None
@@ -277,7 +272,7 @@ class App:
           self._nc.notify('Time to break', title='todo-summary')
         # TODO make sound in cfg
         play_sound('horn.wav')
-        self.footer.set_text("Coffee time...")
+        self.footer.set_text('Coffee time...')
 
         self._m1 = None
         self._m2 = None
@@ -326,7 +321,7 @@ def main():
       rest_mins = config.getint('tosu', 'rest_mins')
     except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
       pass
-      #print "using default"
+      #print 'using default'
 
   app = App(dir, work_mins, rest_mins)
   app.run()

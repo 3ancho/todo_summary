@@ -13,7 +13,7 @@ class ViEdit(urwid.Edit):
   CMD_MODE = 0
   INPUT_MODE = 1
 
-  def __init__(self, caption=u"", edit_text=u"", multiline=False,
+  def __init__(self, caption=u'', edit_text=u'', multiline=False,
           align=LEFT, wrap=SPACE, allow_tab=False,
           edit_pos=None, layout=None, mask=None, 
           app=None, timeout=0.7, last_press=598233600,
@@ -24,8 +24,7 @@ class ViEdit(urwid.Edit):
     self.timeout = timeout
     self.last_press = last_press
     self.key_buf = []
-
-    self.j_pressed = 598233600 
+    self.j_pressed = last_press 
     self._app = app
     super(ViEdit, self).__init__(caption, edit_text, multiline,
            align, wrap, allow_tab,
@@ -37,8 +36,7 @@ class ViEdit(urwid.Edit):
       self.keypress = self.cmd_keypress
     else:
       self.mode = ViEdit.INPUT_MODE
-      self._app.footer.set_text('-- INSERT --')
-      self._app.display('INSERT')
+      self._app.footer.set_text(u'-- INSERT --')
 
   def get_app(self):
     return self._app
@@ -56,41 +54,54 @@ class ViEdit(urwid.Edit):
       self.last_press = time.time()
 
     # print key pressed in mode bar
-    self._app.display(self.key_buf[-10:])
+    # self._app.display(self.key_buf[-10:])
 
     # Step 2.
     if key == 'i':
       self.mode = ViEdit.INPUT_MODE
-      self._app.footer.set_text('-- INSERT --')
-      self._app.display('INSERT')
+      self._app.footer.set_text(u'-- INSERT --')
+      # key control shift
+      self.keypress = self.origin_keypress
+
+    elif key == 'a':
+      pos = self.get_cursor_coords(size)
+      self.move_cursor_to_coords(size, pos[0] + 1, pos[1])
+      self.mode = ViEdit.INPUT_MODE
+      self._app.footer.set_text(u'-- INSERT --')
       # key control shift
       self.keypress = self.origin_keypress
 
     elif key == 'esc':
       # in cmd mode just clear key buffer
-      self._app.display('')
-      self._app.footer.set_text('')
+      self._app.display(u'')
+      self._app.footer.set_text(u'')
       self.key_buf = []
 
-    elif key == 'k':
+    elif key == 'k' or key == 'up':
       # up 
       pos = self.get_cursor_coords(size)
       self.move_cursor_to_coords(size, pos[0], pos[1] - 1)
 
-    elif key == 'j':
+    elif key == 'j' or key == 'down':
       # down 
       pos = self.get_cursor_coords(size)
       self.move_cursor_to_coords(size, pos[0], pos[1] + 1)
 
-    elif key == 'h':
+    elif key == 'h' or key == 'left':
       # left 
-        pos = self.get_cursor_coords(size)
-        self.move_cursor_to_coords(size, pos[0] - 1, pos[1])
+      pos = self.get_cursor_coords(size)
+      self.move_cursor_to_coords(size, pos[0] - 1, pos[1])
 
-    elif key == 'l':
+    elif key == 'l' or key == 'right':
       # right 
-        pos = self.get_cursor_coords(size)
-        self.move_cursor_to_coords(size, pos[0] + 1, pos[1])
+      pos = self.get_cursor_coords(size)
+      self.move_cursor_to_coords(size, pos[0] + 1, pos[1])
+
+    elif key == 'w':
+      pass
+
+    elif key == 'b':
+      pass
 
     elif key == '$':
         pos = self.get_cursor_coords(size)
@@ -131,6 +142,8 @@ class ViEdit(urwid.Edit):
   def keypress(self, size, key):
     
     if key == 'esc': # 1. Change mode
+      pos = self.get_cursor_coords(size)
+      self.move_cursor_to_coords(size, pos[0] - 1, pos[1])
       # clear buffer
       self.key_buf = []
       self.mode = ViEdit.CMD_MODE
@@ -202,7 +215,6 @@ class TodoEdit(ViEdit):
   def cmd_keypress(self, size, key):
     if key == 'i':
       self._app.footer.set_text(u'-- INSERT --')
-#      self._app.display(u'INSERT')
       self.keypress = self.origin_keypress
       # added bellow
       if hasattr(self, 'pre'):
@@ -224,12 +236,12 @@ class TodoEdit(ViEdit):
         # 1. Fresh start
         cur = self.get_pile_focus()
         if cur != 0:
-          self._app.footer.set_text("Task Started...")
+          self._app.footer.set_text(u'Task Started...')
           self._app.set_alarm()
       elif self._app._timer_handle != None:
         # 2. re-start
         self._app.remove_clock_alarm()
-        self._app.footer.set_text("Task Re-Started...")
+        self._app.footer.set_text(u'Task Re-Started...')
         self._app.set_alarm()
       else:
         # TODO 3. pause and resume
