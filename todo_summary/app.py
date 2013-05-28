@@ -161,7 +161,10 @@ class App:
       target = self.summary_pile.focus_item
       t = 'summary'
     else:
-      return 
+      return
+
+    if target == None:
+      return key
 
     # 2. Handle
     if key == 'esc':
@@ -324,10 +327,12 @@ def main():
   config = ConfigParser.ConfigParser()
   config_file = os.path.expanduser('~/.tosuconf')
 
+  # Default values
   dir = os.path.expanduser('~/Desktop')
   work_mins = 25
   rest_mins = 5
 
+  # if config file exists, we might override default values
   if os.path.exists(config_file):
     config.read(config_file)
     try:
