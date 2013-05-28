@@ -288,9 +288,10 @@ class TodoEdit(ViEdit):
       return super(TodoEdit, self).keypress(size, key) 
 
 class TodoItem(urwid.Text):
-
+  # TodoItem is a UI widget, that associates with an todo instance
+  # self.obj is an instance of todo class. 
   # overwrite
-  def __init__(self, markup, align=LEFT, wrap=SPACE, layout=None, data=None,):
+  def __init__(self, markup, align=LEFT, wrap=SPACE, layout=None, data=None):
     # data obj
     if data:
       self.set_obj(data)

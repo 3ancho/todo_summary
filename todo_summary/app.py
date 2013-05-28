@@ -38,6 +38,10 @@ class MyUnpickler(pickle.Unpickler):
 
 class App:
   def __init__(self, dir='./', work_mins=25, rest_mins=5):
+    """default config file directory is current directory
+       work time 25 min
+       rest time 5 min
+    """
     self._dir = dir
     self._work_mins = work_mins
     self._rest_mins = rest_mins
@@ -46,6 +50,7 @@ class App:
     self.todos = None
     self.summary = None
 
+    # platform dependeny notifier
     if platform == 'darwin':
       self._nc = OSXNotifier() 
     elif platform == 'linux2':
@@ -55,6 +60,7 @@ class App:
 
     self.init_ui()
 
+    # ui style 
     palette = [
         ('body','dark blue', '', 'standout'),
         ('footer','light red', '', 'black'),
@@ -101,9 +107,8 @@ class App:
 
     # Summary
     # summary_fill can be frame.body, option 1
-#    self.summary_edit = ViEdit(u'Summary:\n', multiline=True, app=self)
-#    self.summary_edit2 = ViEdit(u'Summary2:\n', multiline=True, app=self)
-    self.summary_pile = urwid.Pile([])
+    self.summary_edit = ViEdit(u'Summary:\n', multiline=True, app=self)
+    self.summary_pile = urwid.Pile([self.summary_edit])
     self.summary_fill = urwid.Filler(self.summary_pile, 'top')
 
     # Todos 
@@ -111,25 +116,38 @@ class App:
     self.todos = []
     self.todos_view = []
 
+    # mode = 1, insert mode TODO costomize mode
+    self.todo_edit = TodoEdit(caption=u'Todo:\n>>> ', multiline=False, mode=1, app=self)
+    # TODO change this pile, need to change many parts
+    self.todos_view.append(self.todo_edit)
+
+    # Only todo data stored in pickle TODO move it
     self._pickle_file = os.path.join(self._dir, 'tosu_data.pickle')
+
+    # if data available
     if os.path.exists(self._pickle_file):
-      #self.todos = pickle.load(open(self._pickle_file, 'rb'))
       self.todos = MyUnpickler(open(self._pickle_file)).load() 
 
+    # TODO why reverse?
     for obj in reversed(self.todos):
+      # show undone todo item 
       if obj._done == False:
+        # create view for each todo instance
         new_view_item = urwid.AttrWrap(TodoItem(str(obj), data=obj), 'body')
         self.todos_view.append(new_view_item)
 
-    # mode = 1, insert mode
-    self.todo_edit = TodoEdit(caption=u'Todo:\n>>> ', multiline=False, mode=1, app=self)
-
-    # TODO change this pile, need to change many parts
-    self.todos_view.insert(0, self.todo_edit)
+    """ todos_view 
+        1. todo_edit widget
+        2. todo_item
+        3. todo_item
+        .
+        .
+        .
+    """
     self.todo_pile = urwid.Pile(self.todos_view, focus_item=0)
     self.todo_fill = urwid.Filler(self.todo_pile, 'top')
 
-    # TODO chose which view to show first in cfg file
+    # TODO chose which view to show first in cfg file, now show todo by default
     self.frame = urwid.AttrWrap(urwid.Frame(self.todo_fill, header=self.header, footer=self.footer_pile), 'body')
 
     # used by TodoEdit in widgets.py
@@ -137,10 +155,12 @@ class App:
 
   def get_todo_focus(self):
     # used by TodoEdit in widgets.py
+    # TODO this is same as todos_view.focus
     return self._todo_focus
 
   def set_todo_focus(self, i):
     # used by TodoEdit in widgets.py
+    # TODO this is same as todos_view.focus
     self._todo_focus = i
 
   def run(self):
@@ -169,14 +189,6 @@ class App:
     # 2. Handle
     if key == 'esc':
       pass
-    elif key == 'tab':
-      cur = self.summary_pile.focus_position
-      summary_pile_len = len(self.summary_pile.widget_list)
-
-      if cur == summary_pile_len - 1:
-        self.summary_pile.focus_position = 0
-      else:
-        self.summary_pile.focus_position = cur + 1
 
     elif key == 'enter':
       command = target.key_buf[:-1] # pop the 'enter' key

@@ -2,7 +2,7 @@
 import datetime 
 
 class Todo(object):
-  """Task class"""
+  """Todo item class"""
 
   def __init__(self, time_unit=0, content=u'', app=None):
     super(Todo, self).__init__()
