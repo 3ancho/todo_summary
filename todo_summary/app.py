@@ -13,7 +13,6 @@ import ConfigParser
 from sys import platform
 from threading import Timer
 
-from summary import Summary
 from todo import Todo
 from widgets import ViEdit
 from widgets import TodoEdit
@@ -162,9 +161,8 @@ class App:
     self._todo_focus = i
 
   def run(self):
-    self.todo = Todo(app=self)
-    self.summary = Summary(app=self, dirname=self._dir)
-    self.header.set_text(self.summary.filepath)
+    self.todo = Todo(app=self, dirname=self._dir)
+    self.header.set_text(self.todo.md_filepath) # TODO change this title
     self.loop.run()
 
   def display(self, something):
@@ -174,10 +172,10 @@ class App:
     # 1. Check Body = ?
     if self.frame.get_body() == self.todo_fill:
       target = self.todo_edit
-      t = 'todo'
+      target_label = 'todo'
     elif self.frame.get_body() == self.summary_fill:
       target = self.summary_pile.focus_item
-      t = 'summary'
+      target_label= 'summary'
     else:
       return
 
@@ -187,7 +185,7 @@ class App:
     # 2. Handle
     if key == 'esc':
       pass
-    elif key == 'tab' and t == 'summary':
+    elif key == 'tab' and target_label== 'summary':
       # tab only works in summary mode
       cur = self.summary_pile.focus_position
       summary_pile_len = len(self.summary_pile.widget_list)
@@ -206,30 +204,34 @@ class App:
         raise urwid.ExitMainLoop()
 
       if last(2, command) == ':w': 
-        self.update(t)
-        self.save(t)
+        self.update(target_label)
+        self.save(target_label)
 
       if last(2, command) == ':x' or last(3, command) ==  ':wq': 
-        self.update(t)
-        self.save(t)
+        self.update(target_label)
+        self.save(target_label)
         time.sleep(0.2) # flash the message 
         raise urwid.ExitMainLoop()
 
       if last(3, command) == ':to' or last(2, command) == ':t':
-        self.update(t)
-        self.save(t)
+        self.update(target_label)
+        self.save(target_label)
         self.frame.set_body(self.todo_fill)
         self.todo_edit.keypress = self.todo_edit.cmd_keypress
 
       if last(3, command) == ':su' or last(2, command) == ':s':
-        self.update(t)
-        self.save(t)
+        self.update(target_label)
+        self.save(target_label)
 
         summary_list = []
-        for todo_task in self.todos:
+
+        for todo_obj in self.todos:
           # Generate Summary views
-          if todo_task._done: 
-            summary_list.append(ViEdit(todo_task.content + '\n', multiline=True, app=self))
+          if todo_obj._done:  
+            # TODO load existing summary
+            summary_list.append(ViEdit("* " + todo_obj.content + '\n', multiline=True, app=self, todo=todo_obj))
+        if len(summary_list) == 0:
+          return
 
         self.summary_pile = urwid.Pile(summary_list)
         self.summary_fill = urwid.Filler(self.summary_pile, 'top')
@@ -238,27 +240,36 @@ class App:
     # End elif 'enter'
   # End func
 
-  def update(self, t=None):
-    if t == None:
+  def update(self, target_label=None):
+    if target_label== None:
       return
-    elif t == 'summary':
-      content = u'\n\n'.join([su.edit_text for su in self.summary_pile.widget_list])
-      self.summary.set_content( content )
-    elif t == 'todo':
+    elif target_label== 'summary':
+      for summary_view in self.summary_pile.widget_list:
+        if summary_view.todo:
+          summary_view.todo._summary = summary_view.edit_text
+    elif target_label== 'todo':
       pass
 
-  def save(self, t=None):
-    if t == None:
+  def save(self, target_label=None):
+    if target_label== None:
       return
-    elif t == 'summary':
-      filepath = self.summary.save_md()
-      self.footer.set_text(u'Summary saved to: %s' % filepath)
-    elif t == 'todo':
+    elif target_label== 'summary':
+      f = open("test.json", 'w')
+      f.write("\n{[")
+      f.write("\n".join([ su.todo.to_json() for su in self.summary_pile.widget_list if su.todo]))
+      f.write("\n]}")
+      f.close()
+
+#      msg = self.summary.save_md()
+#      self.footer.set_text(u'Summary saved to: %s' % msg)
+      
+    elif target_label== 'todo':
       self.footer.set_text(u'todo saved')
 
-      for item in self.todos:
-        item.view = None
+#      for item in self.todos:
+#        item.view = None
 
+      # TODO backup 
       pickle.dump(self.todos, open(self._pickle_file, 'wb'))
 
   def set_alarm(self):

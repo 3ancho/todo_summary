@@ -17,7 +17,7 @@ class ViEdit(urwid.Edit):
           align=LEFT, wrap=SPACE, allow_tab=False,
           edit_pos=None, layout=None, mask=None, 
           app=None, timeout=0.7, last_press=598233600,
-          mode=CMD_MODE):
+          mode=CMD_MODE, todo=None):
 
     # additional stuff 
     self.mode = mode 
@@ -37,6 +37,8 @@ class ViEdit(urwid.Edit):
     else:
       self.mode = ViEdit.INPUT_MODE
       self._app.footer.set_text(u'-- INSERT --')
+
+    self.todo = todo
 
   def get_app(self):
     return self._app
@@ -154,9 +156,12 @@ class ViEdit(urwid.Edit):
     elif key == 'j':
       # jk -> esc -> enter cmd mode 
       self.j_pressed = time.time()
+      # let j pass through, if k pressed this will be removed.
+      return super(ViEdit, self).keypress(size, key) 
     elif key == 'k':
       # jk -> esc -> enter cmd mode 
       if (time.time() - self.j_pressed) < 0.2:
+        self.keypress(size, 'backspace')
         self.keypress(size, 'esc')
       else:
         return super(ViEdit, self).keypress(size, key) 
@@ -248,6 +253,7 @@ class TodoEdit(ViEdit):
         pass
     elif key == ' ' and not ':' in self.key_buf:
       cur = self.get_pile_focus()
+      self._app.footer.set_text(u'Clicking space %s' % cur)
       if cur != 0:
         view = self._app.todo_pile.widget_list[cur]
         view.toggle_done()

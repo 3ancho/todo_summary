@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 import datetime 
+import json
+import os
 
 class Todo(object):
   """Todo item class"""
 
-  def __init__(self, time_unit=0, content=u'', app=None):
+  def __init__(self, time_unit=0, content=u'', app=None, dirname='./'):
     super(Todo, self).__init__()
+    self.view = None # need this
 
     # datetime obj
     self._created = datetime.datetime.now()
@@ -17,16 +20,63 @@ class Todo(object):
 
     # over time
     self._ot = 0
-
     # done time
     self._dt = 0
 
-    # text
+    # The name of the task 
     self.content = content
 
-    self.view = None
-
     self._done = False
+    self.tags = ["abc"] # a list
+    self._summary = ""  # summary not ready yet
+    self._dirname = dirname
+
+    md_filename = '%s.md' % self._created.strftime('%Y_%m_%d')
+    self._md_filepath = os.path.join(self._dirname, md_filename)
+
+    json_filename = '%s.json' % self._created.strftime('%Y_%m_%d')
+    self._json_filepath = os.path.join(self._dirname, json_filename)
+
+  def set_tags(self, tags):
+    self.tags = tags
+
+  def set_content(self, content):
+    self._content = content
+
+  # need read from json
+  def load_from(self, filepath):
+    pass
+        
+  @property
+  def md_filepath(self):
+    return self._md_filepath
+
+  @property
+  def json_filepath(self):
+    return self._json_filepath
+
+  def to_json(self, pretty=None):
+    if pretty:
+      pretty = 4
+
+    d = {}
+    d['created'] = self._created.strftime('%d_%m_%Y')
+    d['done_date'] = self._done_date.strftime('%d_%m_%Y')
+    d['time_unit'] = self._time_unit
+    d['done_unit'] = self._done_unit
+#    d['tags'] = self.tags
+    d['content'] = self.content
+    d['summary'] = self._summary
+    return json.dumps(d, indent=pretty, separators=(',',': '))
+
+  def save_md(self):
+    with open(self.filepath, 'w') as f:
+      f.write(self._content)
+    return 'saved to file %s' % format(self._filepath)
+ 
+  def save_pickle(self, tag='', content=''):
+    pass
+  
 
   def toggle_done(self):
     # toggle binded TodoItem in UI
