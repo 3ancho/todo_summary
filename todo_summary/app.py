@@ -107,9 +107,7 @@ class App:
 
     # Summary
     # summary_fill can be frame.body, option 1
-    self.summary_edit = ViEdit(u'Summary:\n', multiline=True, app=self)
-    self.summary_pile = urwid.Pile([self.summary_edit])
-    self.summary_fill = urwid.Filler(self.summary_pile, 'top')
+    # This will be created when first typed command ':s'
 
     # Todos 
     # todo_fill can be frame.body, option 2
@@ -189,6 +187,15 @@ class App:
     # 2. Handle
     if key == 'esc':
       pass
+    elif key == 'tab' and t == 'summary':
+      # tab only works in summary mode
+      cur = self.summary_pile.focus_position
+      summary_pile_len = len(self.summary_pile.widget_list)
+
+      if cur == summary_pile_len - 1:
+        self.summary_pile.focus_position = 0
+      else:
+        self.summary_pile.focus_position = cur + 1
 
     elif key == 'enter':
       command = target.key_buf[:-1] # pop the 'enter' key
@@ -217,11 +224,10 @@ class App:
       if last(3, command) == ':su' or last(2, command) == ':s':
         self.update(t)
         self.save(t)
-        ViEdit(u'Summary2:\n', multiline=True, app=self)
-        new_text = u'\n'.join([str(todo_task).decode('utf8') for todo_task in self.todos if todo_task._done == True])
 
         summary_list = []
         for todo_task in self.todos:
+          # Generate Summary views
           if todo_task._done: 
             summary_list.append(ViEdit(todo_task.content + '\n', multiline=True, app=self))
 
