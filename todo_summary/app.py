@@ -285,7 +285,7 @@ class App:
     # the dict is passed into callback: self.alarm
     play_sound('scifi_start.wav')
     if self._nc:
-      self._nc.notify('A task [name] has started', title='todo-summary')
+      self._nc.notify('A task have been started', title='todo-summary')
 
     self._m1 = sec * 1 /3 
     self._m2 = sec * 2 /3 
