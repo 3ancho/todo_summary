@@ -30,4 +30,6 @@ def main():
   app.run()
 
 if __name__ == '__main__':
+  import sys
+  sys.path.insert(0, "../todo_summary")
   main()
