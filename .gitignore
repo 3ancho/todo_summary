@@ -8,3 +8,6 @@ dist
 build
 vendor
 *.log
+.project
+.pydevproject
+.settings

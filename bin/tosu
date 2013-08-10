@@ -5,6 +5,7 @@ import ConfigParser
 
 from todo_summary.app import App
 from todo_summary.todo import Todo
+import todo_summary.widgets 
 
 def main():
   config = ConfigParser.ConfigParser()
